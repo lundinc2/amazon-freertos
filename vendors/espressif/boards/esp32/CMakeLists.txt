@@ -14,6 +14,8 @@ endif()
 afr_mcu_port(compiler)
 
 set(linker_flags "-Wl,--gc-sections" "-Wl,--cref" "-Wl,--Map=output.map" "-Wl,--undefined=uxTopUsedPriority")
+set(mchp_dir "${AFR_VENDORS_DIR}/microchip")
+set(ecc608a_dir "${mchp_dir}/secure_elements")
 
 # Linker flags
 target_link_options(
@@ -40,7 +42,28 @@ endif()
 
 # Kernel
 afr_mcu_port(kernel)
+
+
+afr_glob_src(ecc608a_src DIRECTORY ${ecc608a_dir}/lib)
+list(REMOVE_ITEM ecc608a_src "${ecc608a_dir}/lib/atca_cfgs.c")
+
 afr_glob_src(driver_src DIRECTORY "${esp_idf_dir}" RECURSE)
+
+
+afr_glob_src(ecc608a_atacert_src RECURSE DIRECTORY ${ecc608a_dir}/lib/atcacert)
+afr_glob_src(ecc608a_basic_src RECURSE DIRECTORY ${ecc608a_dir}/lib/basic)
+afr_glob_src(ecc608a_crypto_src RECURSE DIRECTORY ${ecc608a_dir}/lib/crypto)
+afr_glob_src(ecc608a_host_src RECURSE DIRECTORY ${ecc608a_dir}/lib/host)
+afr_glob_src(ecc608a_pkcs11_src RECURSE DIRECTORY ${ecc608a_dir}/lib/pkcs11)
+
+set(
+    ecc608a_hal_src
+        "${ecc608a_dir}/lib/hal/atca_hal.c"
+        "${ecc608a_dir}/lib/hal/hal_freertos.c"
+        "${ecc608a_dir}/lib/hal/hal_esp32_i2c.c"
+        "${ecc608a_dir}/lib/hal/hal_esp32_timer.c"
+        "${ecc608a_dir}/lib/hal/atca_hal.h"
+)
 
 set(
     kernel_inc_dirs
@@ -58,6 +81,7 @@ set(
     "${esp_idf_dir}/components/soc/esp32/include"
     "${esp_idf_dir}/components/soc/include"
     "${esp_idf_dir}/components/spi_flash/include"
+    "${board_dir}/application_code/include"
     "${board_dir}/application_code/espressif_code/freertos/include"
     "${board_dir}/application_code/espressif_code/ethernet/include"
     "${board_dir}/application_code/espressif_code/mbedtls/port/include"
@@ -71,6 +95,8 @@ target_include_directories(
         ${kernel_inc_dirs}
         "${AFR_KERNEL_DIR}/portable/ThirdParty/GCC/Xtensa_ESP32/include/"
         "${aws_credentials_include}"
+        "${ecc608a_dir}/lib"
+        "${esp_idf_dir}/components/esp_ringbuf/include"
         "${board_dir}/config_files"
         "$<$<NOT:${AFR_METADATA_MODE}>:${CMAKE_BINARY_DIR}/config>"
 )
@@ -85,6 +111,13 @@ target_link_libraries(
 target_sources(
     AFR::wifi::mcu_port
     INTERFACE "${afr_ports_dir}/wifi/iot_wifi.c"
+    "${esp_idf_dir}/components/esp_ringbuf/ringbuf.c"
+    "${ecc608a_src}"
+    "${ecc608a_atacert_src}"
+    "${ecc608a_basic_src}"
+    "${ecc608a_crypto_src}"
+    "${ecc608a_hal_src}"
+    "${ecc608a_host_src}"
 )
 
 # BLE
@@ -143,7 +176,8 @@ afr_mcu_port(pkcs11_implementation DEPENDS AFR::pkcs11_mbedtls)
 target_sources(
     AFR::pkcs11_implementation::mcu_port
     INTERFACE
-        "${afr_ports_dir}/pkcs11/iot_pkcs11_pal.c"
+        "${ecc608a_pkcs11_src}"
+        "${afr_ports_dir}/pkcs11/iot_pkcs11_secure_element.c"
 )
 
 # FreeRTOS Plus TCP
@@ -203,6 +237,7 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
     add_executable(
         ${exe_target}
         "${board_dir}/application_code/main.c"
+        "${board_demos_dir}/application_code/atca_cert_chain.c"
         ${extra_exe_sources}
     )
     target_include_directories(
@@ -242,6 +277,7 @@ set_source_files_properties(
     PROPERTIES COMPILE_FLAGS
     "-Wno-format"
 )
+
 
 set_source_files_properties(${AFR_DEMOS_DIR}/logging/iot_logging_task_dynamic_buffers.c
     PROPERTIES COMPILE_FLAGS

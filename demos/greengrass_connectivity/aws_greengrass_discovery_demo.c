@@ -1,5 +1,5 @@
 /*
- * Amazon FreeRTOS V201910.00
+ * Amazon FreeRTOS V201912.00
  * Copyright (C) 2019 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -155,6 +155,8 @@ static IotMqttError_t _mqttConnect( GGD_HostAddressData_t * pxHostAddressData,
     xCredentials.rootCaSize = ( size_t ) pxHostAddressData->ulCertificateSize;
     /* Disable SNI. */
     xCredentials.disableSni = true;
+    /* ALPN is not needed. */
+    xCredentials.pAlpnProtos = NULL;
 
     /* Set the server info. */
     xServerInfo.pHostName = pxHostAddressData->pcHostAddress;

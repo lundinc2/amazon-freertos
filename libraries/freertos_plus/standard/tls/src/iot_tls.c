@@ -727,6 +727,8 @@ BaseType_t TLS_Init( void ** ppvContext,
 
 BaseType_t TLS_Connect( void * pvContext )
 {
+	uint32_t xBeforeDemoHeapSize = xPortGetMinimumEverFreeHeapSize();
+
     BaseType_t xResult = 0;
     TLSContext_t * pxCtx = ( TLSContext_t * ) pvContext; /*lint !e9087 !e9079 Allow casting void* to other types. */
 
@@ -753,22 +755,8 @@ BaseType_t TLS_Connect( void * pvContext )
     else
     {
         xResult = mbedtls_x509_crt_parse( &pxCtx->xMbedX509CA,
-                                          ( const unsigned char * ) tlsVERISIGN_ROOT_CERTIFICATE_PEM,
-                                          tlsVERISIGN_ROOT_CERTIFICATE_LENGTH );
-
-        if( 0 == xResult )
-        {
-            xResult = mbedtls_x509_crt_parse( &pxCtx->xMbedX509CA,
-                                              ( const unsigned char * ) tlsATS1_ROOT_CERTIFICATE_PEM,
-                                              tlsATS1_ROOT_CERTIFICATE_LENGTH );
-
-            if( 0 == xResult )
-            {
-                xResult = mbedtls_x509_crt_parse( &pxCtx->xMbedX509CA,
-                                                  ( const unsigned char * ) tlsSTARFIELD_ROOT_CERTIFICATE_PEM,
-                                                  tlsSTARFIELD_ROOT_CERTIFICATE_LENGTH );
-            }
-        }
+                                          ( const unsigned char * )tlsATS3_ROOT_CERTIFICATE_PEM,
+										  tlsATS3_ROOT_CERTIFICATE_LENGTH);
 
         if( 0 != xResult )
         {
@@ -880,6 +868,10 @@ BaseType_t TLS_Connect( void * pvContext )
     /* Free up allocated memory. */
     mbedtls_x509_crt_free( &pxCtx->xMbedX509CA );
     mbedtls_x509_crt_free( &pxCtx->xMbedX509Cli );
+	uint32_t xAfterDemoHeapSize = xPortGetMinimumEverFreeHeapSize();
+
+	TLS_PRINT(("\r\n\nTLS Handshake usage %u\r\n\n", xBeforeDemoHeapSize - xAfterDemoHeapSize));
+
 
     return xResult;
 }

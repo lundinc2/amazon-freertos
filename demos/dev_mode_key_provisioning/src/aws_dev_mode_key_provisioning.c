@@ -198,6 +198,7 @@ static CK_RV prvProvisionPrivateECKey( CK_SESSION_HANDLE xSession,
 
 /*-----------------------------------------------------------*/
 
+#ifdef MBEDTLS_RSA_C
 /* Import the specified RSA private key into storage. */
 static CK_RV prvProvisionPrivateRSAKey( CK_SESSION_HANDLE xSession,
                                         uint8_t * pucLabel,
@@ -287,8 +288,9 @@ static CK_RV prvProvisionPrivateRSAKey( CK_SESSION_HANDLE xSession,
 
     return xResult;
 }
-
+#endif /* MBEDTLS_RSA_C */
 /*-----------------------------------------------------------*/
+
 
 /* Import the specified private key into storage. */
 CK_RV xProvisionPrivateKey( CK_SESSION_HANDLE xSession,
@@ -315,7 +317,7 @@ CK_RV xProvisionPrivateKey( CK_SESSION_HANDLE xSession,
     if( xResult == CKR_OK )
     {
         xMbedKeyType = mbedtls_pk_get_type( &xMbedPkContext );
-
+		#ifdef MBEDTLS_RSA_C
         if( xMbedKeyType == MBEDTLS_PK_RSA )
         {
             xResult = prvProvisionPrivateRSAKey( xSession,
@@ -323,7 +325,8 @@ CK_RV xProvisionPrivateKey( CK_SESSION_HANDLE xSession,
                                                  pxObjectHandle,
                                                  &xMbedPkContext );
         }
-        else if( ( xMbedKeyType == MBEDTLS_PK_ECDSA ) || ( xMbedKeyType == MBEDTLS_PK_ECKEY ) || ( xMbedKeyType == MBEDTLS_PK_ECKEY_DH ) )
+		#endif
+        if( ( xMbedKeyType == MBEDTLS_PK_ECDSA ) || ( xMbedKeyType == MBEDTLS_PK_ECKEY ) || ( xMbedKeyType == MBEDTLS_PK_ECKEY_DH ) )
         {
             xResult = prvProvisionPrivateECKey( xSession,
                                                 pucLabel,
@@ -379,6 +382,7 @@ CK_RV xProvisionPublicKey( CK_SESSION_HANDLE xSession,
         xResult = CKR_ARGUMENTS_BAD;
     }
 
+	#ifdef MBEDTLS_RSA_C
     if( ( xResult == CKR_OK ) && ( xPublicKeyType == CKK_RSA ) )
     {
         CK_BYTE xPublicExponent[] = { 0x01, 0x00, 0x01 };
@@ -406,7 +410,9 @@ CK_RV xProvisionPublicKey( CK_SESSION_HANDLE xSession,
                                                   sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                                   pxPublicKeyHandle );
     }
-    else if( ( xResult == CKR_OK ) && ( xPublicKeyType == CKK_EC ) )
+	#endif
+
+    if( ( xResult == CKR_OK ) && ( xPublicKeyType == CKK_EC ) )
     {
         CK_BYTE xEcParams[] = pkcs11DER_ENCODED_OID_P256;
         size_t xLength;

@@ -939,7 +939,7 @@
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_RC4_128_SHA
  */
-#define MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
@@ -987,7 +987,7 @@
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_CAMELLIA_128_GCM_SHA256
  *      MBEDTLS_TLS_ECDH_ECDSA_WITH_CAMELLIA_256_GCM_SHA384
  */
-//#define MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
+#define MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED
@@ -1177,7 +1177,7 @@
  *
  * Comment this macro to disable support for external private RSA keys.
  */
-#define MBEDTLS_PK_RSA_ALT_SUPPORT
+//#define MBEDTLS_PK_RSA_ALT_SUPPORT
 
 /**
  * \def MBEDTLS_PKCS1_V15
@@ -1188,7 +1188,7 @@
  *
  * This enables support for PKCS#1 v1.5 operations.
  */
-#define MBEDTLS_PKCS1_V15
+//#define MBEDTLS_PKCS1_V15
 
 /**
  * \def MBEDTLS_PKCS1_V21
@@ -2660,7 +2660,7 @@
  *
  * Requires: MBEDTLS_BIGNUM_C, MBEDTLS_OID_C
  */
-#define MBEDTLS_RSA_C
+//#define MBEDTLS_RSA_C
 
 /**
  * \def MBEDTLS_SHA1_C
@@ -3098,7 +3098,7 @@
  * Uncomment to set the maximum plaintext size of both
  * incoming and outgoing I/O buffers.
  */
-#define MBEDTLS_SSL_MAX_CONTENT_LEN             8192
+//#define MBEDTLS_SSL_MAX_CONTENT_LEN             4096
 
 /** \def MBEDTLS_SSL_IN_CONTENT_LEN
  *
@@ -3123,7 +3123,7 @@
  * Uncomment to set the maximum plaintext size of the incoming I/O buffer
  * independently of the outgoing I/O buffer.
  */
-//#define MBEDTLS_SSL_IN_CONTENT_LEN              16384
+#define MBEDTLS_SSL_IN_CONTENT_LEN              2200
 
 /** \def MBEDTLS_SSL_OUT_CONTENT_LEN
  *
@@ -3147,7 +3147,7 @@
  * Uncomment to set the maximum plaintext size of the outgoing I/O buffer
  * independently of the incoming I/O buffer.
  */
-//#define MBEDTLS_SSL_OUT_CONTENT_LEN             16384
+#define MBEDTLS_SSL_OUT_CONTENT_LEN             1000
 
 /** \def MBEDTLS_SSL_DTLS_MAX_BUFFERING
  *

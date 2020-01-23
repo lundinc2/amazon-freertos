@@ -159,19 +159,23 @@ typedef struct P11Session
 /**
  * @brief Implementation of calloc for use by the mbedTLS heap management API
  */
-void* pvMbedTLSCalloc(size_t nmemb, size_t size)
+void * pvMbedTLSCalloc( size_t nmemb,
+                        size_t size )
 {
     size_t totalSize = nmemb * size;
-    void* pBuffer = NULL;
+    void * pBuffer = NULL;
 
     /* Check that neither nmemb nor size were 0. */
-    if (totalSize > 0) {
+    if( totalSize > 0 )
+    {
         /* Overflow check. */
-        if (totalSize / size == nmemb) {
-            pBuffer = pvPortMalloc(totalSize);
+        if( totalSize / size == nmemb )
+        {
+            pBuffer = pvPortMalloc( totalSize );
 
-            if (pBuffer != NULL) {
-                (void)memset(pBuffer, 0x00, totalSize);
+            if( pBuffer != NULL )
+            {
+                ( void ) memset( pBuffer, 0x00, totalSize );
             }
         }
     }
@@ -184,12 +188,13 @@ void* pvMbedTLSCalloc(size_t nmemb, size_t size)
 /**
  * @brief Implementation of free for use by the mbedTLS heap management API
  */
-void vMbedTLSFree(void* ptr)
+void vMbedTLSFree( void * ptr )
 {
-    vPortFree(ptr);
+    vPortFree( ptr );
 }
 
 /*-----------------------------------------------------------*/
+
 /**
  * @brief Maps an opaque caller session handle into its internal state structure.
  */

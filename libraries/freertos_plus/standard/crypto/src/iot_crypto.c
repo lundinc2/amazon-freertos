@@ -244,21 +244,8 @@ static BaseType_t prvVerifySignature( char * pcSignerCertificate,
 
 void CRYPTO_Init( void )
 {
-    CRYPTO_ConfigureHeap();
     CRYPTO_ConfigureThreading();
 }
-
-/**
- * @brief Overrides CRT heap callouts to use FreeRTOS instead
- */
-void CRYPTO_ConfigureHeap( void )
-{
-    /*
-     * Ensure that the FreeRTOS heap is used.
-     */
-    mbedtls_platform_set_calloc_free( prvCalloc, vPortFree ); /*lint !e534 This function always return 0. */
-}
-
 
 void CRYPTO_ConfigureThreading( void )
 {

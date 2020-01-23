@@ -156,8 +156,40 @@ typedef struct P11Session
 /*-----------------------------------------------------------*/
 /*--------- See iot_pkcs11_pal.c for definitions ------------*/
 
+/**
+ * @brief Implementation of calloc for use by the mbedTLS heap management API
+ */
+void* pvMbedTLSCalloc(size_t nmemb, size_t size)
+{
+    size_t totalSize = nmemb * size;
+    void* pBuffer = NULL;
 
+    /* Check that neither nmemb nor size were 0. */
+    if (totalSize > 0) {
+        /* Overflow check. */
+        if (totalSize / size == nmemb) {
+            pBuffer = pvPortMalloc(totalSize);
 
+            if (pBuffer != NULL) {
+                (void)memset(pBuffer, 0x00, totalSize);
+            }
+        }
+    }
+
+    return pBuffer;
+}
+
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Implementation of free for use by the mbedTLS heap management API
+ */
+void vMbedTLSFree(void* ptr)
+{
+    vPortFree(ptr);
+}
+
+/*-----------------------------------------------------------*/
 /**
  * @brief Maps an opaque caller session handle into its internal state structure.
  */

@@ -68,9 +68,9 @@ typedef struct SignatureVerificationState
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Implements libc calloc semantics using the FreeRTOS heap
+ * @brief Implementation of calloc for use by the mbedTLS heap management API
  */
-static void * prvCalloc( size_t xNmemb,
+void * pvMbedTLSCalloc( size_t xNmemb,
                          size_t xSize )
 {
     void * pvNew = pvPortMalloc( xNmemb * xSize );
@@ -83,6 +83,17 @@ static void * prvCalloc( size_t xNmemb,
     return pvNew;
 }
 
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Implementation of free for use by the mbedTLS heap management API
+ */
+void vMbedTLSFree( void * ptr )
+{
+    vPortFree( ptr );
+}
+
+/*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
 /*--------- mbedTLS threading functions for FreeRTOS --------*/

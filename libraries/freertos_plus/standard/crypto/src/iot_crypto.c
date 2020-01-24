@@ -71,7 +71,7 @@ typedef struct SignatureVerificationState
  * @brief Implementation of calloc for use by the mbedTLS heap management API
  */
 void * pvMbedTLSCalloc( size_t xNmemb,
-                         size_t xSize )
+                        size_t xSize )
 {
     void * pvNew = pvPortMalloc( xNmemb * xSize );
 

@@ -68,7 +68,7 @@ typedef struct SignatureVerificationState
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Implementation of calloc for use by the mbedTLS heap management API
+ * @brief Implementation of calloc for use by the mbedTLS heap management API.
  */
 void * pvMbedTLSCalloc( size_t xNmemb,
                         size_t xSize )
@@ -86,7 +86,7 @@ void * pvMbedTLSCalloc( size_t xNmemb,
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Implementation of free for use by the mbedTLS heap management API
+ * @brief Implementation of free for use by the mbedTLS heap management API.
  */
 void vMbedTLSFree( void * ptr )
 {

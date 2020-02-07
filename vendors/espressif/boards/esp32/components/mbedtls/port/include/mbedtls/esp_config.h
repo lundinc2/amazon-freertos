@@ -2736,9 +2736,6 @@
  */
 #define MBEDTLS_TLS_DEFAULT_ALLOW_SHA1_IN_KEY_EXCHANGE
 
-#define MBEDTLS_PLATFORM_CALLOC_MACRO vMbedTLSCalloc
-#define MBEDTLS_PLATFORM_FREE_MACRO vMbedTLSFree
-
 /* \} name SECTION: Module configuration options */
 
 #if defined(TARGET_LIKE_MBED)

@@ -69,7 +69,7 @@ extern void vLoggingPrint( const char * pcFormat );
 
 /* Developer convenience override, for lab testing purposes, for generating
  * a new default key pair, regardless of whether an existing key pair is present. */
-#define keyprovisioningFORCE_GENERATE_NEW_KEY_PAIR    0
+#define keyprovisioningFORCE_GENERATE_NEW_KEY_PAIR    1
 
 /* Internal structure for parsing RSA keys. */
 

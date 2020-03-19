@@ -182,7 +182,7 @@ static CK_RV prvProvisionPrivateECKey( CK_SESSION_HANDLE xSession,
             { CKA_VALUE,     pxD,               EC_D_LENGTH                                      }
         };
 
-        configPRINTF( ( "Write Private EC Key...\r\n" ) );
+        configPRINTF( ( "Write private EC key...\r\n" ) );
         xResult = pxFunctionList->C_CreateObject( xSession,
                                                   ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
                                                   sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
@@ -275,7 +275,7 @@ static CK_RV prvProvisionPrivateRSAKey( CK_SESSION_HANDLE xSession,
             { CKA_COEFFICIENT,      pxRsaParams->coefficient + 1, COEFFICIENT_LENGTH                               }
         };
 
-        configPRINTF( ( "Write Private RSA Key...\r\n" ) );
+        configPRINTF( ( "Write private RSA key...\r\n" ) );
         xResult = pxFunctionList->C_CreateObject( xSession,
                                                   ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
                                                   sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
@@ -403,7 +403,7 @@ CK_RV xProvisionPublicKey( CK_SESSION_HANDLE xSession,
             { CKA_LABEL,           pucPublicKeyLabel, strlen( ( const char * ) pucPublicKeyLabel ) }
         };
 
-        configPRINTF( ( "Write Public RSA Key...\r\n" ) );
+        configPRINTF( ( "Write public RSA key...\r\n" ) );
         xResult = pxFunctionList->C_CreateObject( xSession,
                                                   ( CK_ATTRIBUTE_PTR ) xPublicKeyTemplate,
                                                   sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
@@ -438,7 +438,7 @@ CK_RV xProvisionPublicKey( CK_SESSION_HANDLE xSession,
             { CKA_LABEL,     pucPublicKeyLabel, strlen( ( const char * ) pucPublicKeyLabel ) }
         };
 
-        configPRINTF( ( "Write Public EC Key...\r\n" ) );
+        configPRINTF( ( "Write public EC key...\r\n" ) );
         xResult = pxFunctionList->C_CreateObject( xSession,
                                                   ( CK_ATTRIBUTE_PTR ) xPublicKeyTemplate,
                                                   sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
@@ -1050,7 +1050,7 @@ CK_RV xProvisionDevice( CK_SESSION_HANDLE xSession,
         }
         else
         {
-            configPRINTF( ( "Successfully Provisioned Device Certificate.\r\n" ) );
+            configPRINTF( ( "Successfully provisioned device certificate.\r\n" ) );
         }
     }
 
@@ -1072,7 +1072,7 @@ CK_RV xProvisionDevice( CK_SESSION_HANDLE xSession,
             }
             else
             {
-                configPRINTF( ( "Successfully Provisioned Device Private Key.\r\n" ) );
+                configPRINTF( ( "Successfully provisioned device private key.\r\n" ) );
                 xImportedPrivateKey = CK_TRUE;
             }
         }
@@ -1098,7 +1098,7 @@ CK_RV xProvisionDevice( CK_SESSION_HANDLE xSession,
         }
         else
         {
-            configPRINTF( ( "Successfully Provisioned JITP certificate.\r\n" ) );
+            configPRINTF( ( "Successfully provisioned JITP certificate.\r\n" ) );
         }
     }
 
@@ -1294,16 +1294,16 @@ void RunProvisionDemo( void )
 {
     CK_RV xResult = CKR_OK;
 
-    configPRINTF( ( "Beginning Device Provisioning...\r\n" ) );
+    configPRINTF( ( "Beginning device provisioning...\r\n" ) );
     xResult = vDevModeKeyProvisioning();
 
     if( xResult == CKR_OK )
     {
-        configPRINTF( ( "Succesfully Provisioned Device.\r\n" ) );
+        configPRINTF( ( "Succesfully provisioned device.\r\n" ) );
     }
     else
     {
-        configPRINTF( ( "There was an error Provisioning the Device, error code %d.\r\n", xResult ) );
+        configPRINTF( ( "There was an error provisioning the device, error code %d.\r\n", xResult ) );
     }
 
     return xResult;

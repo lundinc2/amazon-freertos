@@ -46,6 +46,7 @@
 #include "iot_wifi.h"
 #include "aws_clientcredential.h"
 #include "aws_application_version.h"
+#include "aws_dev_mode_key_provisioning.h"
 
 /* Declare the firmware version structure for all to see.
 const AppVersion32_t xAppFirmwareVersion = {
@@ -258,6 +259,10 @@ void vStartupHook( void *pvParameters)
     } else {
         configPRINT("\r\nSystem Init failed \r\n");
     }
+    /* A simple example to demonstrate key and certificate provisioning in
+     * flash using PKCS#11 interface. This should be replaced
+     * by production ready key provisioning mechanism. */
+    vDevModeKeyProvisioning();
 
     /* Start the demo tasks. */
     DEMO_RUNNER_RunDemos();

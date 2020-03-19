@@ -156,7 +156,7 @@ void vApplicationDaemonTaskStartupHook( void )
 		FreeRTOS_printf( ( "The network is up and running\n" ) );
 
         /* Provision the device with AWS certificate and private key. */
-        vDevModeKeyProvisioning();
+        //vDevModeKeyProvisioning();
 
         /* Run all demos. */
         DEMO_RUNNER_RunDemos();

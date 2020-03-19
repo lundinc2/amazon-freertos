@@ -106,7 +106,7 @@ static void prvMiscInitialization( void )
 
 void vApplicationDaemonTaskStartupHook( void )
 {
-    vDevModeKeyProvisioning();
+    ////vDevModeKeyProvisioning();
     
     /* Initialize the AWS Libraries system. */
     if ( SYSTEM_Init() == pdPASS )

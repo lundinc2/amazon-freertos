@@ -262,7 +262,7 @@ void vStartupHook( void *pvParameters)
     /* A simple example to demonstrate key and certificate provisioning in
      * flash using PKCS#11 interface. This should be replaced
      * by production ready key provisioning mechanism. */
-    vDevModeKeyProvisioning();
+    //vDevModeKeyProvisioning();
 
     /* Start the demo tasks. */
     DEMO_RUNNER_RunDemos();

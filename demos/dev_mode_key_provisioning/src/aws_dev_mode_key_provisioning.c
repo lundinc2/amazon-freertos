@@ -1290,13 +1290,15 @@ CK_RV vDevModeKeyProvisioning( void )
 /*-----------------------------------------------------------*/
 
 /* Perform device provisioning using the default TLS client credentials. */
-void RunProvisionDemo( void )
+CK_RV RunProvisionDemo( void )
 {
     CK_RV xResult = CKR_OK;
 
     configPRINTF( ( "Beginning device provisioning...\r\n" ) );
     xResult = vDevModeKeyProvisioning();
 
+    // TODO: On ESP this gets returned if the device has already been provisioned.
+    // We check for it here so the demo does not get counted as a failure.
     if( xResult == CKR_OK )
     {
         configPRINTF( ( "Succesfully provisioned device.\r\n" ) );

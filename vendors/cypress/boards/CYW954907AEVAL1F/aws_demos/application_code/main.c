@@ -151,7 +151,7 @@ void vApplicationDaemonTaskStartupHook( void )
         prvGenerateRandomSeed();
 
         /* Provision the device with AWS certificate and private key. */
-        vDevModeKeyProvisioning();
+        //vDevModeKeyProvisioning();
 
         /* Start the demo tasks. */
         DEMO_RUNNER_RunDemos();

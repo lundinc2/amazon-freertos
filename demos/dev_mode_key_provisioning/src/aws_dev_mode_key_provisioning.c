@@ -1290,7 +1290,7 @@ CK_RV vDevModeKeyProvisioning( void )
 /*-----------------------------------------------------------*/
 
 /* Perform device provisioning using the default TLS client credentials. */
-void RunProvisionDemo( void )
+int RunProvisionDemo( void )
 {
     CK_RV xResult = CKR_OK;
 

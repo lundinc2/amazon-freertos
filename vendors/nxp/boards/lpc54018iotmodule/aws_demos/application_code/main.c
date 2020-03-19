@@ -239,7 +239,7 @@ void vApplicationDaemonTaskStartupHook( void )
     /* A simple example to demonstrate key and certificate provisioning in
      * microcontroller flash using PKCS#11 interface. This should be replaced
      * by production ready key provisioning mechanism. */
-    vDevModeKeyProvisioning();
+    //vDevModeKeyProvisioning();
 
     if( SYSTEM_Init() == pdPASS )
     {

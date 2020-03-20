@@ -176,7 +176,7 @@
 #define IOT_CLOUD_ENDPOINT                clientcredentialMQTT_BROKER_ENDPOINT
 
 /* Certificate for the device.*/
-#define IOT_DEVICE_CERTIFICATE            keyCLIENT_CERTIFICATE_PEM
+#define IOT_DEVICE_CERTIFICATE            NULL
 
 /**
  * @brief Unique identifier used to recognize a device by the cloud.
@@ -279,11 +279,11 @@ typedef struct IotNetworkCredentials   IotTestNetworkCredentials_t;
         .disableSni = false,                                   \
         .pAlpnProtos = NULL,                                   \
         .pRootCa = NULL,                                       \
-        .pClientCert = keyCLIENT_CERTIFICATE_PEM,              \
-        .pPrivateKey = keyCLIENT_PRIVATE_KEY_PEM,              \
+        .pClientCert = NULL,              \
+        .pPrivateKey = NULL,              \
         .rootCaSize = 0,                                       \
-        .clientCertSize = sizeof( keyCLIENT_CERTIFICATE_PEM ), \
-        .privateKeySize = sizeof( keyCLIENT_PRIVATE_KEY_PEM )  \
+        .clientCertSize = 0, \
+        .privateKeySize = 0  \
     }
 #endif /* if clientcredentialMQTT_BROKER_PORT == 443 */
 

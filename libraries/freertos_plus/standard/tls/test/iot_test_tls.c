@@ -330,8 +330,7 @@ TEST( Full_TLS, AFQP_TLS_ConnectMalformedCert )
     ProvisioningParams_t xParams;
 
     /* Provision the device with malformed client credential certificate. */
-    xParams.pucClientPrivateKey = ( uint8_t * ) keyCLIENT_PRIVATE_KEY_PEM;
-    xParams.ulClientPrivateKeyLength = 1 + strlen( ( const char * ) xParams.pucClientPrivateKey );
+    xParams.pucClientPrivateKey = ( uint8_t * ) pucGetClientKey( &xParams.ulClientPrivateKeyLength );
     xParams.pucClientCertificate = ( uint8_t * ) tlstestCLIENT_CERTIFICATE_PEM_MALFORMED;
     xParams.ulClientCertificateLength = tlstestCLIENT_CERTIFICATE_PEM_MALFORMED_LENGTH;
     xParams.ulJITPCertificateLength = 0; /* Do not provision JITP certificate. */

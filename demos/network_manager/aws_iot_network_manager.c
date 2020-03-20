@@ -670,10 +670,8 @@ static void _initializeTCPIPCredentials( void )
         tcpIPCredentials.disableSni = false;
         tcpIPCredentials.pRootCa = NULL;
         tcpIPCredentials.rootCaSize = 0;
-        tcpIPCredentials.pClientCert = keyCLIENT_CERTIFICATE_PEM;
-        tcpIPCredentials.clientCertSize = sizeof( keyCLIENT_CERTIFICATE_PEM );
-        tcpIPCredentials.pPrivateKey = keyCLIENT_PRIVATE_KEY_PEM;
-        tcpIPCredentials.privateKeySize = sizeof( keyCLIENT_PRIVATE_KEY_PEM );
+        tcpIPCredentials.pClientCert = pucGetClientCert( &tcpIPCredentials.clientCertSize );
+        tcpIPCredentials.pPrivateKey = pucGetClientKey( &tcpIPCredentials.privateKeySize );
     #endif /* if TCPIP_NETWORK_ENABLED */
 }
 

@@ -107,10 +107,10 @@ typedef struct _networkConnection IotNetworkConnectionAfr_t;
         .disableSni = false,                                   \
         .pRootCa = NULL,                                       \
         .rootCaSize = 0,                                       \
-        .pClientCert = keyCLIENT_CERTIFICATE_PEM,              \
-        .clientCertSize = sizeof( keyCLIENT_CERTIFICATE_PEM ), \
-        .pPrivateKey = keyCLIENT_PRIVATE_KEY_PEM,              \
-        .privateKeySize = sizeof( keyCLIENT_PRIVATE_KEY_PEM )  \
+        .pClientCert = NULL,              \
+        .clientCertSize = 0, \
+        .pPrivateKey = NULL,              \
+        .privateKeySize = 0  \
     }
 
 /**

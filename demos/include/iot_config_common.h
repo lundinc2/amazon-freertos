@@ -175,7 +175,7 @@
 #define IOT_CLOUD_ENDPOINT        clientcredentialMQTT_BROKER_ENDPOINT
 
 /* Certificate for the device. */
-#define IOT_DEVICE_CERTIFICATE    keyCLIENT_CERTIFICATE_PEM
+#define IOT_DEVICE_CERTIFICATE    NULL
 
 /**
  * @brief Unique identifier used to recognize a device by the cloud.

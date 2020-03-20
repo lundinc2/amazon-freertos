@@ -808,11 +808,9 @@ CK_RV prvAddObjectToList( CK_OBJECT_HANDLE xPalHandle,
 
         if( 0 == memcmp( pucLabel, pkcs11configLABEL_JITP_CERTIFICATE, strlen( ( char * ) pkcs11configLABEL_JITP_CERTIFICATE ) ) )
         {
-            if( NULL != keyJITR_DEVICE_CERTIFICATE_AUTHORITY_PEM )
-            {
-                *ppucCertData = ( uint8_t * ) keyJITR_DEVICE_CERTIFICATE_AUTHORITY_PEM;
-            }
-            else
+            *ppucCertData = (uint8_t*)pucGetJITPCert(NULL);
+
+            if (NULL == ppucCertData)
             {
                 PKCS11_PRINT( ( "ERROR: JITP Certificate not specified.\r\n" ) );
             }

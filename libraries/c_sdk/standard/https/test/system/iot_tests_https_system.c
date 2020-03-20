@@ -108,18 +108,6 @@
 #endif /* ifndef IOT_TEST_HTTPS_ROOT_CA */
 
 /**
- * Client certificate and private key configurations.
- *
- * With PKCS #11 provisioning of the internally stored keys these parameters are deprecated.
- */
-#ifndef IOT_TEST_HTTPS_CLIENT_CERTIFICATE
-    #define IOT_TEST_HTTPS_CLIENT_CERTIFICATE    keyCLIENT_CERTIFICATE_PEM  /**< @brief Client certificate configuration. */
-#endif
-#ifndef IOT_TEST_HTTPS_CLIENT_PRIVATE_KEY
-    #define IOT_TEST_HTTPS_CLIENT_PRIVATE_KEY    keyCLIENT_PRIVATE_KEY_PEM  /**< @brief Client private key configuration. */
-#endif
-
-/**
  * @brief Timeout in milliseconds for tests that synchronously send HTTP requests.
  *
  * This timeout encompasses the waiting time for the both sending of the request and receiving the response.
@@ -246,10 +234,10 @@ static IotHttpsConnectionInfo_t _connInfo =
     #if IOT_TEST_SECURED_CONNECTION == 1
         .pCaCert          = IOT_TEST_HTTPS_ROOT_CA,
         .caCertLen        = sizeof( IOT_TEST_HTTPS_ROOT_CA ),
-        .pClientCert      = IOT_TEST_HTTPS_CLIENT_CERTIFICATE,
-        .clientCertLen    = sizeof( IOT_TEST_HTTPS_CLIENT_CERTIFICATE ),
-        .pPrivateKey      = IOT_TEST_HTTPS_CLIENT_PRIVATE_KEY,
-        .privateKeyLen    = sizeof( IOT_TEST_HTTPS_CLIENT_PRIVATE_KEY ),
+        .pClientCert      = NULL,
+        .clientCertLen    = 0,
+        .pPrivateKey      = NULL,
+        .privateKeyLen    = 0,
         .pAlpnProtocols   = IOT_TEST_HTTPS_ALPN_PROTOCOLS,
         .alpnProtocolsLen = sizeof( IOT_TEST_HTTPS_ALPN_PROTOCOLS ),
     #endif
@@ -537,6 +525,8 @@ TEST_GROUP( HTTPS_Client_System );
 TEST_SETUP( HTTPS_Client_System )
 {
     /* This will initialize the library before every test case, which is OK. */
+    _connInfo.pClientCert = pucGetClientCert(&_connInfo.clientCertLen);
+    _connInfo.pPrivateKey = pucGetClientCert(&_connInfo.privateKeyLen);
     TEST_ASSERT_EQUAL_INT( true, IotSdk_Init() );
     TEST_ASSERT_EQUAL( IOT_HTTPS_OK, IotHttpsClient_Init() );
 

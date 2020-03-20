@@ -120,7 +120,7 @@ TEST( MQTT_Unit_Metrics, Generate_MD5Hash )
 
 TEST( MQTT_Unit_Metrics, Get_DeviceIdentifier )
 {
-    const char * pDeviceCert = keyCLIENT_CERTIFICATE_PEM;
+    const char * pDeviceCert = pucGetClientCert(NULL);
     const char * pDeviceIdentifier = getDeviceIdentifier();
 
     if( ( pDeviceCert == NULL ) || ( strcmp( pDeviceCert, "" ) == 0 ) )

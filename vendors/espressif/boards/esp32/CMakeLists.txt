@@ -315,6 +315,7 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
     target_link_libraries(
         ${exe_target}
         PRIVATE
+            AFR::credentials
             AFR::wifi
             AFR::utils
             AFR::ble

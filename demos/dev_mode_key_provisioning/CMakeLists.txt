@@ -18,6 +18,7 @@ afr_module_include_dirs(
 afr_module_dependencies(
     ${AFR_CURRENT_MODULE}
     PUBLIC
+        AFR::credentials
         AFR::pkcs11
         AFR::utils
         3rdparty::mbedtls

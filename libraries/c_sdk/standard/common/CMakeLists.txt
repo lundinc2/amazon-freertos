@@ -53,6 +53,7 @@ afr_module_dependencies(
     ${AFR_CURRENT_MODULE}
     PUBLIC
         AFR::platform
+        AFR::credentials
 )
 
 # test for common module

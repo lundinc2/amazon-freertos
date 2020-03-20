@@ -61,6 +61,7 @@ if (AFR_ENABLE_UNIT_TESTS)
 endif()
 
 # Initialize all modules.
+add_subdirectory("credentials")
 add_subdirectory("libraries")
 add_subdirectory("demos")
 add_subdirectory("tests")

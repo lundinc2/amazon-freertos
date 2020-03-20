@@ -16,8 +16,6 @@ afr_module_sources(
         "${src_dir}/iot_test_freertos.c"
         "${src_dir}/iot_tests_network.c"
         "${inc_dir}/aws_application_version.h"
-        "${inc_dir}/aws_clientcredential.h"
-        "${inc_dir}/aws_clientcredential_keys.h"
         "${inc_dir}/aws_test_runner.h"
         "${inc_dir}/aws_test_framework.h"
         "${inc_dir}/aws_test_tcp.h"
@@ -32,6 +30,7 @@ afr_module_include_dirs(
 afr_module_dependencies(
     ${AFR_CURRENT_MODULE}
     INTERFACE
+        AFR::credentials
         AFR::kernel
         AFR::common
         3rdparty::unity

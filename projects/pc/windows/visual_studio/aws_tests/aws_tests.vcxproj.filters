@@ -139,6 +139,15 @@
     <Filter Include="libraries\c_sdk\standard\mqtt\test\mock">
       <UniqueIdentifier>{e82c61c9-2513-404e-9f64-9bb2ef588f9e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="credentials">
+      <UniqueIdentifier>{da9ae18c-0b10-4a86-a3ad-9965abc53641}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="credentials\include">
+      <UniqueIdentifier>{316297bf-772c-4bb3-ab45-5d7db97f05b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="credentials\src">
+      <UniqueIdentifier>{e300e7a3-a490-45d6-b7b8-21175f480fdd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\..\freertos_kernel\include\FreeRTOS.h">
@@ -199,12 +208,6 @@
       <Filter>freertos_kernel\portable\MSVC-MingW</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\tests\include\aws_application_version.h">
-      <Filter>tests\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\tests\include\aws_clientcredential.h">
-      <Filter>tests\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\tests\include\aws_clientcredential_keys.h">
       <Filter>tests\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\tests\include\aws_test_runner.h">
@@ -707,6 +710,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\libraries\c_sdk\standard\mqtt\test\mock\iot_tests_mqtt_mock.h">
       <Filter>libraries\c_sdk\standard\mqtt\test\mock</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\credentials\include\aws_clientcredential.h">
+      <Filter>credentials\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\credentials\include\aws_clientcredential_keys.h">
+      <Filter>credentials\include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1441,6 +1450,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\libraries\c_sdk\standard\mqtt\test\mock\iot_tests_mqtt_mock.c">
       <Filter>libraries\c_sdk\standard\mqtt\test\mock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\credentials\src\aws_clientcredential_keys.c">
+      <Filter>credentials\src</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

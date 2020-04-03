@@ -173,7 +173,9 @@ void vApplicationIPNetworkEventHook( eIPCallbackEvent_t eNetworkEvent )
     	configPRINTF( ("Network connection successful.\n\r") );
         if( ( xTasksAlreadyCreated == pdFALSE ) && ( SYSTEM_Init() == pdPASS ) )
         {
-        	vDevModeKeyProvisioning();
+#ifndef CONFIG_PROVISIONING_DEMO_ENABLED
+            vDevModeKeyProvisioning();
+#endif /* CONFIG_PROVISIONING_DEMO_ENABLED */
             DEMO_RUNNER_RunDemos();
             xTasksAlreadyCreated = pdTRUE;
 

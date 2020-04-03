@@ -147,7 +147,9 @@ void vApplicationDaemonTaskStartupHook( void )
          * by production ready key provisioning mechanism. This function must be called after
          * initializing the TI File System using WIFI_On. */
         WIFI_On();
+#ifndef CONFIG_PROVISIONING_DEMO_ENABLED
         vDevModeKeyProvisioning();
+#endif /* CONFIG_PROVISIONING_DEMO_ENABLED */
         prvProvisionRootCA();
 
         /* Show the possible security alerts that will affect re-flashing the device.

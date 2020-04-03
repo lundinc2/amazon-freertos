@@ -163,7 +163,9 @@ int main( void )
     /* A simple example to demonstrate key and certificate provisioning in
      * microcontroller flash using PKCS#11 interface. This should be replaced
      * by production ready key provisioning mechanism. */
-    vDevModeKeyProvisioning();       
+#ifndef CONFIG_PROVISIONING_DEMO_ENABLED
+    vDevModeKeyProvisioning();
+#endif /* CONFIG_PROVISIONING_DEMO_ENABLED */
 
 #if ( configENABLED_NETWORKS & AWSIOT_NETWORK_TYPE_ETH )
     FreeRTOS_IPInit( ucIPAddress,

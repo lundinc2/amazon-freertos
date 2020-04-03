@@ -106,7 +106,9 @@ static void prvMiscInitialization( void )
 
 void vApplicationDaemonTaskStartupHook( void )
 {
+#ifndef CONFIG_PROVISIONING_DEMO_ENABLED
     vDevModeKeyProvisioning();
+#endif /* CONFIG_PROVISIONING_DEMO_ENABLED */
     
     /* Initialize the AWS Libraries system. */
     if ( SYSTEM_Init() == pdPASS )

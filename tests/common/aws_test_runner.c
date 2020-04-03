@@ -269,7 +269,7 @@ void TEST_RUNNER_RunTests_task( void * pvParameters )
 
     /* Currently disabled. Will be enabled after cleanup. */
     UNITY_END();
-
+#define CODE_COVERAGE
     #ifdef CODE_COVERAGE
         exit( 0 );
     #endif

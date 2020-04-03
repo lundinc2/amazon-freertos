@@ -26,14 +26,14 @@
 #ifndef AWS_CLIENT_CREDENTIAL_KEYS_H
 #define AWS_CLIENT_CREDENTIAL_KEYS_H
 
-#include <stdint.h>
+#include <stddef.h>
 
-const char * pucGetClientCert( uint32_t * ulCertSize );
-const char * pucGetJITPCert( uint32_t * ulCertSize );
-const char * pucGetClientKey( uint32_t * ulKeySize );
+const char * pucGetClientCert( size_t * ulCertSize );
+const char * pucGetJITPCert(size_t* ulCertSize );
+const char * pucGetClientKey(size_t* ulKeySize );
 
-void vProvisionClientCert( void );
-void vProvisionJITPCert( void );
-void vProvisionClientKey( void );
+size_t vLoadClientCert( void );
+size_t vLoadJITPCert( void );
+size_t vLoadClientKey( void );
 
 #endif

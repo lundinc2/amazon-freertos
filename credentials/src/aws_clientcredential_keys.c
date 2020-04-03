@@ -51,8 +51,7 @@
  * http://www.FreeRTOS.org
  */
 
-#include <stdint.h>
-#include <stddef.h>
+#include "aws_clientcredential_keys.h"
 
 /*
  * @brief PEM-encoded client certificate.
@@ -65,7 +64,7 @@
  * "...base64 data...\n"\
  * "-----END CERTIFICATE-----\n"
  */
-#define keyCLIENT_CERTIFICATE_PEM ""
+#define keyCLIENT_CERTIFICATE_PEM NULL
 
 /*
  * @brief PEM-encoded issuer certificate for AWS IoT Just In Time Registration
@@ -89,7 +88,7 @@
  * "...base64 data...\n"\
  * "-----END CERTIFICATE-----\n"
  */
-#define keyJITR_DEVICE_CERTIFICATE_AUTHORITY_PEM ""
+#define keyJITR_DEVICE_CERTIFICATE_AUTHORITY_PEM NULL 
 
 /*
  * @brief PEM-encoded client private key.
@@ -102,9 +101,10 @@
  * "...base64 data...\n"\
  * "-----END RSA PRIVATE KEY-----\n"
  */
-#define keyCLIENT_PRIVATE_KEY_PEM ""
 
-const char * pucGetClientCert( uint32_t* ulCertSize )
+#define keyCLIENT_PRIVATE_KEY_PEM NULL
+
+const char * pucGetClientCert( size_t* ulCertSize )
 {
     if ( ulCertSize != NULL ) 
 	{
@@ -114,7 +114,7 @@ const char * pucGetClientCert( uint32_t* ulCertSize )
     return keyCLIENT_CERTIFICATE_PEM;
 }
 
-const char * pucGetJITPCert( uint32_t* ulCertSize )
+const char * pucGetJITPCert(size_t* ulCertSize )
 {
 
     if ( ulCertSize != NULL ) 
@@ -125,7 +125,7 @@ const char * pucGetJITPCert( uint32_t* ulCertSize )
     return keyJITR_DEVICE_CERTIFICATE_AUTHORITY_PEM;
 }
 
-const char * pucGetClientKey( uint32_t* ulKeySize )
+const char * pucGetClientKey(size_t* ulKeySize )
 {
     if ( ulKeySize != NULL ) 
 	{
@@ -135,21 +135,21 @@ const char * pucGetClientKey( uint32_t* ulKeySize )
     return keyCLIENT_PRIVATE_KEY_PEM;
 }
 
-void vProvisionClientCert()
+size_t vLoadClientCert(void)
 {
     /* Stubbed out for future implementations that load keys through a different
      * mechanism */
-    return;
+    return 0;
 }
-void vProvisionJITPCert(void)
+size_t vLoadJITPCert(void)
 {
     /* Stubbed out for future implementations that load keys through a different
      * mechanism */
-    return;
+    return 0;
 }
-void vProvisionClientKey(void)
+size_t vLoadClientKey(void)
 {
     /* Stubbed out for future implementations that load keys through a different
      * mechanism */
-    return;
+    return 0;
 }

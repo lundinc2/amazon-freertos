@@ -372,7 +372,7 @@ static void _generateUniqueIdentifier( const char * pInput,
  */
 const char * getDeviceIdentifier( void )
 {
-    const char * pCertificate = IOT_DEVICE_CERTIFICATE;
+    const char * pCertificate = IOT_DEVICE_CERTIFICATE();
     static uint32_t lock = 0;
 
     if( deviceIdentifier[ 0 ] == '\0' )

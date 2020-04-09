@@ -67,22 +67,24 @@ typedef struct SignatureVerificationState
 /*------ Helper functions for FreeRTOS heap management ------*/
 /*-----------------------------------------------------------*/
 
+/* If mbedTLS is using AFR managed memory, it needs access to an implementation of calloc. */
+#ifdef CONFIG_MEDTLS_USE_AFR_MEMORY
 /**
  * @brief Implements libc calloc semantics using the FreeRTOS heap
  */
-static void * prvCalloc( size_t xNmemb,
+void * pvCalloc( size_t xNumElements,
                          size_t xSize )
 {
-    void * pvNew = pvPortMalloc( xNmemb * xSize );
+    void * pvNew = pvPortMalloc( xNumElements * xSize );
 
     if( NULL != pvNew )
     {
-        memset( pvNew, 0, xNmemb * xSize );
+        memset( pvNew, 0, xNumElements * xSize );
     }
 
     return pvNew;
 }
-
+#endif
 
 /*-----------------------------------------------------------*/
 /*--------- mbedTLS threading functions for FreeRTOS --------*/
@@ -244,21 +246,8 @@ static BaseType_t prvVerifySignature( char * pcSignerCertificate,
 
 void CRYPTO_Init( void )
 {
-    CRYPTO_ConfigureHeap();
     CRYPTO_ConfigureThreading();
 }
-
-/**
- * @brief Overrides CRT heap callouts to use FreeRTOS instead
- */
-void CRYPTO_ConfigureHeap( void )
-{
-    /*
-     * Ensure that the FreeRTOS heap is used.
-     */
-    mbedtls_platform_set_calloc_free( prvCalloc, vPortFree ); /*lint !e534 This function always return 0. */
-}
-
 
 void CRYPTO_ConfigureThreading( void )
 {

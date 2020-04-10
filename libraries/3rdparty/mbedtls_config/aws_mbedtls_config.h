@@ -201,7 +201,6 @@
     extern void vPortFree( void *pv );
     #define MBEDTLS_PLATFORM_STD_CALLOC pvCalloc
     #define MBEDTLS_PLATFORM_STD_FREE   vPortFree
-    #error this worked
 #endif
 
 /**
@@ -1208,7 +1207,7 @@
  *
  * Uncomment this macro to let the buffer allocator print out error messages.
  */
-//#define MBEDTLS_MEMORY_DEBUG
+#define MBEDTLS_MEMORY_DEBUG
 
 /**
  * \def MBEDTLS_MEMORY_BACKTRACE
@@ -2170,7 +2169,7 @@
  *
  * This module provides debugging functions.
  */
-//#define MBEDTLS_DEBUG_C
+#define MBEDTLS_DEBUG_C
 
 /**
  * \def MBEDTLS_DES_C

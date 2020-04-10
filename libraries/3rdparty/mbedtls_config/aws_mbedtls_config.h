@@ -199,8 +199,8 @@
     extern void * pvCalloc( size_t xNumElements,
                           size_t xSize ) ;
     extern void vPortFree( void *pv );
-    #define MBEDTLS_PLATFORM_STD_CALLOC pvCalloc
-    #define MBEDTLS_PLATFORM_STD_FREE   vPortFree
+    #define MBEDTLS_PLATFORM_CALLOC_MACRO pvCalloc
+    #define MBEDTLS_PLATFORM_FREE_MACRO   vPortFree
 #endif
 
 /**

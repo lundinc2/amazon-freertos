@@ -201,6 +201,7 @@
     extern void vPortFree( void *pv );
     #define MBEDTLS_PLATFORM_STD_CALLOC pvCalloc
     #define MBEDTLS_PLATFORM_STD_FREE   vPortFree
+    #error this worked
 #endif
 
 /**

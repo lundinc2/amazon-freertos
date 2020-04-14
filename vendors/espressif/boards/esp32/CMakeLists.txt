@@ -96,41 +96,6 @@ endif()
 afr_mcu_port(kernel)
 afr_glob_src(driver_src DIRECTORY "${esp_idf_dir}" RECURSE)
 
-if(ECC608_IN_USE)
-    set(mchp_dir "${AFR_VENDORS_DIR}/microchip")
-    set(ecc608a_dir "${mchp_dir}/secure_elements")
-
-    afr_glob_src(ecc608a_atacert_src RECURSE DIRECTORY ${ecc608a_dir}/lib/atcacert)
-
-    afr_glob_src(ecc608a_basic_src RECURSE DIRECTORY ${ecc608a_dir}/lib/basic)
-    afr_glob_src(ecc608a_crypto_src RECURSE DIRECTORY ${ecc608a_dir}/lib/crypto)
-    afr_glob_src(ecc608a_host_src RECURSE DIRECTORY ${ecc608a_dir}/lib/host)
-    afr_glob_src(ecc608a_pkcs11_src RECURSE DIRECTORY ${ecc608a_dir}/lib/pkcs11)
-
-
-    set(
-        ecc608a_hal_src
-            "${ecc608a_dir}/lib/hal/atca_hal.c"
-            "${ecc608a_dir}/lib/hal/hal_freertos.c"
-            "${ecc608a_dir}/lib/hal/hal_esp32_i2c.c"
-            "${ecc608a_dir}/lib/hal/hal_esp32_timer.c"
-            "${ecc608a_dir}/lib/hal/atca_hal.h"
-    )
-
-    afr_glob_src(ecc608a_src DIRECTORY ${ecc608a_dir}/lib)
-    list(REMOVE_ITEM ecc608a_src "${ecc608a_dir}/lib/atca_cfgs.c")
-
-    set(ecc608_include "${ecc608a_dir}/lib")
-    set(ecc608_src_list 
-        "${ecc608a_src}"
-        "${ecc608a_atacert_src}"
-        "${ecc608a_basic_src}"
-        "${ecc608a_crypto_src}"
-        "${ecc608a_hal_src}"
-        "${ecc608a_host_src}"
-    )
-endif()
-
 set(
     kernel_inc_dirs
     "${esp_idf_dir}/components/app_update/include/"
@@ -167,9 +132,10 @@ else()
 endif()
 
 if(ECC608_IN_USE)
+    set(mchp_dir "${AFR_VENDORS_DIR}/microchip")
+    set(ecc608a_dir "${mchp_dir}/secure_elements")
     list(APPEND kernel_inc_dirs
     "${board_dir}/config_files/ecc608a_pkcs11_config"
-    "${ecc608a_dir}/lib"
     "${esp_idf_dir}/components/esp_ringbuf/include"
     )
 else()
@@ -192,11 +158,20 @@ target_include_directories(
 afr_mcu_port(wifi)
 
 if(NOT AFR_ESP_LWIP)
+if(ECC608_IN_USE)
 target_link_libraries(
     AFR::wifi::mcu_port
     INTERFACE
     AFR::freertos_plus_tcp
 )
+else()
+target_link_libraries(
+    AFR::wifi::mcu_port
+    INTERFACE
+    AFR::freertos_plus_tcp
+)
+endif()
+
 else()
 target_include_directories(
     AFR::wifi::mcu_port
@@ -210,19 +185,10 @@ target_include_directories(
 )
 endif()
 
-if(ECC608_IN_USE)
-    target_sources(
-        AFR::wifi::mcu_port
-        INTERFACE 
-            "${afr_ports_dir}/wifi/iot_wifi.c"
-            "${ecc608_src_list}"
-    )
-else()
-    target_sources(
-        AFR::wifi::mcu_port
-        INTERFACE "${afr_ports_dir}/wifi/iot_wifi.c"
-    )
-endif()
+target_sources(
+    AFR::wifi::mcu_port
+    INTERFACE "${afr_ports_dir}/wifi/iot_wifi.c"
+)
 
 # BLE
 set(BLE_SUPPORTED 1 CACHE INTERNAL "BLE is supported on this platform.")
@@ -276,14 +242,23 @@ target_include_directories(
 )
 
 # PKCS11
-afr_mcu_port(pkcs11_implementation)
 if(ECC608_IN_USE)
+    afr_mcu_port(pkcs11_implementation DEPENDS AFR::pkcs11_ecc608a)
+    set(
+        ecc608a_hal_src
+            "${ecc608a_dir}/lib/hal/atca_hal.c"
+            "${ecc608a_dir}/lib/hal/hal_freertos.c"
+            "${ecc608a_dir}/lib/hal/hal_esp32_i2c.c"
+            "${ecc608a_dir}/lib/hal/hal_esp32_timer.c"
+            "${ecc608a_dir}/lib/hal/atca_hal.h"
+    )
     target_sources(
         AFR::pkcs11_implementation::mcu_port
         INTERFACE
-            "${ecc608a_pkcs11_src}"
+            "${ecc608a_hal_src}"
     )
 else()
+    afr_mcu_port(pkcs11_implementation DEPENDS AFR::pkcs11_mbedtls)
     target_sources(
         AFR::pkcs11_implementation::mcu_port
         INTERFACE

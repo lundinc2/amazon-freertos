@@ -19,8 +19,6 @@ afr_module_dependencies(
     ${AFR_CURRENT_MODULE}
     PUBLIC
         AFR::pkcs11
-        AFR::pkcs11_implementation
-        3rdparty::pkcs11
         AFR::utils
         3rdparty::mbedtls
 )

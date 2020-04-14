@@ -2,7 +2,6 @@ afr_module(NAME pkcs11_implementation)
 
 set(inc_dir "${CMAKE_CURRENT_LIST_DIR}/include")
 set(test_dir "${CMAKE_CURRENT_LIST_DIR}/test")
-set(ecc608a_dir "${CMAKE_CURRENT_LIST_DIR}/ecc608a")
 
 afr_module_include_dirs(
     ${AFR_CURRENT_MODULE}
@@ -13,61 +12,85 @@ afr_module_include_dirs(
     "$<IF:${AFR_IS_TESTING},${AFR_MODULES_FREERTOS_PLUS_DIR}/aws/ota/test,${AFR_DEMOS_DIR}/include>"
 )
 
+afr_module_dependencies(
+    ${AFR_CURRENT_MODULE}
+    PUBLIC
+        3rdparty::pkcs11 
+        AFR::pkcs11
+    PRIVATE
+        AFR::${AFR_CURRENT_MODULE}::mcu_port
+	    AFR::utils
+)
+
 
 if(ECC608_IN_USE)
-    afr_module_dependencies(
-        ${AFR_CURRENT_MODULE}
-        PUBLIC
-            3rdparty::pkcs11 
-            AFR::pkcs11
-            AFR::crypto
-            AFR::common
-            AFR::utils
-        PRIVATE
-            AFR::${AFR_CURRENT_MODULE}::mcu_port
+    set(mchp_dir "${AFR_VENDORS_DIR}/microchip")
+    set(ecc608a_dir "${mchp_dir}/secure_elements")
+    set(atca_config_dir "${CMAKE_CURRENT_LIST_DIR}/ecc608a")
+    afr_module(NAME pkcs11_ecc608a INTERFACE)
+
+    afr_glob_src(ecc608a_atacert_src RECURSE DIRECTORY ${ecc608a_dir}/lib/atcacert)
+    afr_glob_src(ecc608a_basic_src RECURSE DIRECTORY ${ecc608a_dir}/lib/basic)
+    afr_glob_src(ecc608a_crypto_src RECURSE DIRECTORY ${ecc608a_dir}/lib/crypto)
+    afr_glob_src(ecc608a_host_src RECURSE DIRECTORY ${ecc608a_dir}/lib/host)
+    afr_glob_src(ecc608a_pkcs11_src RECURSE DIRECTORY ${ecc608a_dir}/lib/pkcs11)
+
+
+    afr_glob_src(ecc608a_src DIRECTORY ${ecc608a_dir}/lib)
+    list(REMOVE_ITEM ecc608a_src "${ecc608a_dir}/lib/atca_cfgs.c")
+
+    set(ecc608_include "${ecc608a_dir}/lib")
+    set(ecc608_src_list
+        "${ecc608a_src}"
+        "${ecc608a_atacert_src}"
+        "${ecc608a_basic_src}"
+        "${ecc608a_crypto_src}"
+        "${ecc608a_host_src}"
+        "${ecc608a_pkcs11_src}"
     )
 
     afr_module_sources(
         ${AFR_CURRENT_MODULE}
-        PUBLIC
-            "${ecc608a_dir}/atca_cert_chain.h"
-            "${ecc608a_dir}/atca_cert_chain.c"
-            "${ecc608a_dir}/iot_pkcs11_secure_element.c"
+        INTERFACE
+            "${atca_config_dir}/atca_cert_chain.h"
+            "${atca_config_dir}/atca_cert_chain.c"
+            "${atca_config_dir}/iot_pkcs11_secure_element.c"
+            "${ecc608_src_list}"
     )
 
     afr_module_include_dirs(
-        ${AFR_CURRENT_MODULE}
-        PUBLIC
+        pkcs11_ecc608a
+        INTERFACE
             "${inc_dir}"
+            "${ecc608_include}"
+    )
+
+    afr_module_dependencies(
+        pkcs11_ecc608a
+        INTERFACE
+            AFR::crypto
+            AFR::pkcs11_implementation
+            AFR::utils
     )
 else()
+    afr_module(NAME pkcs11_mbedtls INTERFACE)
     set(src_dir "${CMAKE_CURRENT_LIST_DIR}/mbedtls")
-    afr_module_dependencies(
-        ${AFR_CURRENT_MODULE}
-        PUBLIC
-            3rdparty::pkcs11 
-            AFR::pkcs11
-            AFR::crypto
-            3rdparty::mbedtls
-            AFR::common
-            AFR::utils
-        PRIVATE
-            AFR::${AFR_CURRENT_MODULE}::mcu_port
-    )
-
 
     afr_module_sources(
-        ${AFR_CURRENT_MODULE}
-        PUBLIC
+        pkcs11_mbedtls 
+        INTERFACE
             "${src_dir}/iot_pkcs11_mbedtls.c"
             "${src_dir}/threading_alt.h"
             "${inc_dir}/iot_pkcs11_pal.h"
     )
 
-    afr_module_include_dirs(
-        ${AFR_CURRENT_MODULE}
-        PUBLIC
-            "${inc_dir}"
+    afr_module_dependencies(
+        pkcs11_mbedtls
+        INTERFACE
+            AFR::crypto
+            AFR::pkcs11_implementation
+            AFR::utils
+            3rdparty::mbedtls
     )
 
 endif()

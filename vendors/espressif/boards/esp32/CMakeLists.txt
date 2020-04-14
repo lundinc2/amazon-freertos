@@ -106,7 +106,6 @@ if(ECC608_IN_USE)
     afr_glob_src(ecc608a_crypto_src RECURSE DIRECTORY ${ecc608a_dir}/lib/crypto)
     afr_glob_src(ecc608a_host_src RECURSE DIRECTORY ${ecc608a_dir}/lib/host)
     afr_glob_src(ecc608a_pkcs11_src RECURSE DIRECTORY ${ecc608a_dir}/lib/pkcs11)
-    afr_glob_src(ecc608a_afr_pkcs11 RECURSE DIRECTORY ${ecc608a_dir}/lib/pkcs11)
 
 
     set(
@@ -276,16 +275,15 @@ target_include_directories(
         "${afr_ports_dir}/ble/nimble"
 )
 
+# PKCS11
+afr_mcu_port(pkcs11_implementation)
 if(ECC608_IN_USE)
-    # PKCS11
-    afr_mcu_port(pkcs11_implementation)
     target_sources(
         AFR::pkcs11_implementation::mcu_port
         INTERFACE
             "${ecc608a_pkcs11_src}"
     )
 else()
-    afr_mcu_port(pkcs11_implementation DEPENDS AFR::pkcs11_mbedtls)
     target_sources(
         AFR::pkcs11_implementation::mcu_port
         INTERFACE

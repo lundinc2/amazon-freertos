@@ -25,15 +25,14 @@ if(ECC608_IN_USE)
             AFR::utils
         PRIVATE
             AFR::${AFR_CURRENT_MODULE}::mcu_port
-            AFR::utils
     )
 
     afr_module_sources(
-    ${AFR_CURRENT_MODULE}
-    PUBLIC
-        "${ecc608a_dir}/atca_cert_chain.h"
-        "${ecc608a_dir}/atca_cert_chain.c"
-        "${ecc608a_dir}/iot_pkcs11_secure_element.c"
+        ${AFR_CURRENT_MODULE}
+        PUBLIC
+            "${ecc608a_dir}/atca_cert_chain.h"
+            "${ecc608a_dir}/atca_cert_chain.c"
+            "${ecc608a_dir}/iot_pkcs11_secure_element.c"
     )
 
     afr_module_include_dirs(
@@ -42,24 +41,24 @@ if(ECC608_IN_USE)
             "${inc_dir}"
     )
 else()
+    set(src_dir "${CMAKE_CURRENT_LIST_DIR}/mbedtls")
     afr_module_dependencies(
         ${AFR_CURRENT_MODULE}
         PUBLIC
             3rdparty::pkcs11 
             AFR::pkcs11
+            AFR::crypto
+            3rdparty::mbedtls
+            AFR::common
+            AFR::utils
         PRIVATE
             AFR::${AFR_CURRENT_MODULE}::mcu_port
-            AFR::utils
     )
 
-    # Link to this INTERFACE target to use the default implementation based on mbedtls.
-    afr_module(NAME pkcs11_mbedtls INTERFACE)
-
-    set(src_dir "${CMAKE_CURRENT_LIST_DIR}/mbedtls")
 
     afr_module_sources(
-        pkcs11_mbedtls
-        INTERFACE
+        ${AFR_CURRENT_MODULE}
+        PUBLIC
             "${src_dir}/iot_pkcs11_mbedtls.c"
             "${src_dir}/threading_alt.h"
             "${inc_dir}/iot_pkcs11_pal.h"
@@ -69,16 +68,8 @@ else()
         ${AFR_CURRENT_MODULE}
         PUBLIC
             "${inc_dir}"
-            "${src_dir}/include"
     )
 
-    afr_module_dependencies(
-        pkcs11_mbedtls
-        INTERFACE
-            AFR::crypto
-            AFR::pkcs11_implementation
-            3rdparty::mbedtls
-    )
 endif()
 
 

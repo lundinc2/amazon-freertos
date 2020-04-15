@@ -135,12 +135,12 @@ if(ECC608_IN_USE)
     set(mchp_dir "${AFR_VENDORS_DIR}/microchip")
     set(ecc608a_dir "${mchp_dir}/secure_elements")
     list(APPEND kernel_inc_dirs
-    "${board_dir}/config_files/ecc608a_pkcs11_config"
-    "${esp_idf_dir}/components/esp_ringbuf/include"
+        "${esp_idf_dir}/components/esp_ringbuf/include"
+        "${board_dir}/config_files/ecc608a_pkcs11_config"
     )
 else()
     list(APPEND kernel_inc_dirs
-    "${board_dir}/config_files/default_pkcs11_config"
+        "${board_dir}/config_files/default_pkcs11_config"
     )
 endif()
 
@@ -252,6 +252,11 @@ if(ECC608_IN_USE)
             "${ecc608a_dir}/lib/hal/hal_esp32_timer.c"
             "${ecc608a_dir}/lib/hal/atca_hal.h"
     )
+    target_include_directories(
+        AFR::pkcs11_implementation::mcu_port
+        INTERFACE
+            "${board_dir}/config_files/ecc608a_pkcs11_config"
+    )
     target_sources(
         AFR::pkcs11_implementation::mcu_port
         INTERFACE
@@ -259,6 +264,11 @@ if(ECC608_IN_USE)
     )
 else()
     afr_mcu_port(pkcs11_implementation DEPENDS AFR::pkcs11_mbedtls)
+    target_include_directories(
+        AFR::pkcs11_implementation::mcu_port
+        INTERFACE
+            "${board_dir}/config_files/default_pkcs11_config/"
+    )
     target_sources(
         AFR::pkcs11_implementation::mcu_port
         INTERFACE

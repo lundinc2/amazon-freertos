@@ -38,11 +38,19 @@
 #include "mock_ctr_drbg.h"
 #include "mock_entropy.h"
 #include "mock_sha256.h"
+#include "mock_pk.h"
+#include "mock_ecp.h"
+#include "mock_bignum.h"
 #include "mock_portable.h"
 
 /* PKCS #11 includes. */
 #include "iot_pkcs11_config.h"
 #include "iot_pkcs11.h"
+/* This mock must be included after pkcs11.h */
+#include "mock_iot_pkcs11_pal.h"
+
+/* mbedtls includes. */
+#include "oid.h"
 
 /* Test includes. */
 #include "unity.h"
@@ -138,9 +146,10 @@ static CK_RV prvUninitializePkcs11( )
  * @brief Helper function to create a PKCS #11 session.
  *
  */
-static CK_RV prvCreateSession( CK_SESSION_HANDLE_PTR pxSession )
+static CK_RV prvOpenSession( CK_SESSION_HANDLE_PTR pxSession )
 {
     CK_RV xResult = CKR_OK;
+    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
 
     pvPortMalloc_Stub( pvPkcs11MallocCb );
     xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
@@ -546,7 +555,6 @@ void test_pkcs11_C_OpenSession( void )
 {
     CK_RV xResult = CKR_OK;
     CK_SESSION_HANDLE xSession = 0;
-    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
 
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
@@ -659,12 +667,13 @@ void test_pkcs11_C_CreateObject( void )
 
     prvOpenSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    char * pucLabel = pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS;
 
     CK_ATTRIBUTE xPrivateKeyTemplate[] =
     {
         { CKA_CLASS,     &xPrivateKeyClass, sizeof( CK_OBJECT_CLASS )                        },
         { CKA_KEY_TYPE,  &xPrivateKeyType,  sizeof( CK_KEY_TYPE )                            },
-        { CKA_LABEL,     pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS, ( CK_ULONG ) strlen( ( const char * ) pucLabel ) },
+        { CKA_LABEL,     pucLabel, ( CK_ULONG ) strlen( ( const char * ) pucLabel ) },
         { CKA_TOKEN,     &xTrue,            sizeof( CK_BBOOL )                               },
         { CKA_SIGN,      &xTrue,            sizeof( CK_BBOOL )                               },
         { CKA_EC_PARAMS, pxEcParams,        EC_PARAMS_LENGTH                                 },
@@ -672,8 +681,17 @@ void test_pkcs11_C_CreateObject( void )
     };
     CK_OBJECT_HANDLE xObject = 0;
 
-    mbedtls_pk_init_CMock_Ignore();
+    mbedtls_pk_init_CMockIgnore();
     pvPortMalloc_Stub( pvPkcs11MallocCb );
+    PKCS11_PAL_FindObject_IgnoreAndReturn( &xResult );
+    PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
+    mbedtls_pk_parse_key_IgnoreAndReturn( 0 );
+    PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    mbedtls_ecp_keypair_init_CMockIgnore();
+    mbedtls_ecp_group_init_CMockIgnore();
+    mbedtls_ecp_group_load_IgnoreAndReturn( 0 );
+    mbedtls_mpi_read_binary_IgnoreAndReturn( 0 );
     xResult = C_CreateObject( xSession,
                               ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
                               sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),

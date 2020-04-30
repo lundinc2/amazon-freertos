@@ -26,6 +26,7 @@
 /* C runtime includes. */
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
@@ -36,6 +37,8 @@
 #include "mock_queue.h"
 #include "mock_ctr_drbg.h"
 #include "mock_entropy.h"
+#include "mock_sha256.h"
+#include "mock_portable.h"
 
 /* PKCS #11 includes. */
 #include "iot_pkcs11_config.h"
@@ -96,6 +99,78 @@ int suiteTearDown( int numFailures )
     return numFailures;
 }
 
+/* TODO: add a helper functions banner here */
+/*!
+ * @brief Helper function to initialize PKCS #11.
+ *
+ */
+static CK_RV  prvInitializePkcs11( SemaphoreHandle_t pxPKCS11Mutex )
+{
+    CK_RV xResult = CKR_OK;
+
+    xQueueCreateMutex_IgnoreAndReturn( pxPKCS11Mutex   );
+    CRYPTO_Init_Ignore();
+    mbedtls_entropy_init_Ignore();
+    mbedtls_ctr_drbg_init_Ignore();
+    mbedtls_ctr_drbg_seed_IgnoreAndReturn( 0 );
+    xResult = C_Initialize( NULL );
+
+    return xResult;
+}
+
+/*!
+ * @brief Helper function to initialize PKCS #11.
+ *
+ */
+static CK_RV prvUninitializePkcs11( )
+{
+    CK_RV xResult = CKR_OK;
+
+    mbedtls_entropy_free_CMockIgnore();
+    mbedtls_ctr_drbg_free_CMockIgnore();
+    vQueueDelete_CMockIgnore();
+    xResult = C_Finalize( NULL );
+
+    return xResult;
+}
+
+/*!
+ * @brief Helper function to create a PKCS #11 session.
+ *
+ */
+static CK_RV prvCreateSession( CK_SESSION_HANDLE_PTR pxSession )
+{
+    CK_RV xResult = CKR_OK;
+
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
+    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
+    xResult = C_OpenSession( 0, xFlags, NULL, 0, pxSession );
+
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    return xResult;
+}
+
+/*!
+ * @brief Helper function to close a PKCS #11 session.
+ *
+ */
+static CK_RV prvCloseSession( CK_SESSION_HANDLE_PTR pxSession )
+{
+    CK_RV xResult = CKR_OK;
+
+    vQueueDelete_Ignore();
+    vQueueDelete_Ignore();
+    vPortFree_Stub( vPkcs11FreeCb );
+    mbedtls_sha256_free_CMockIgnore();
+    xResult = C_CloseSession( *pxSession );
+
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    return xResult;
+}
+
 /* ======================  TESTING C_Initialize  ============================ */
 
 /*!
@@ -105,23 +180,11 @@ int suiteTearDown( int numFailures )
 void test_pkcs11_C_Initialize( void )
 {
     CK_RV xResult = CKR_OK;
-
-    /* Hack: Giving out pointer to xResult when creating a mutex. This unit testcase
-     * will never use the actual mutex. */
-    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
-    CRYPTO_Init_Ignore();
-    mbedtls_entropy_init_Ignore();
-    mbedtls_ctr_drbg_init_Ignore();
-    mbedtls_ctr_drbg_seed_IgnoreAndReturn( 0 );
-    xResult = C_Initialize( NULL );
-
+    
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    mbedtls_entropy_free_CMockIgnore();
-    mbedtls_ctr_drbg_free_CMockIgnore();
-    vQueueDelete_CMockIgnore();
-    xResult = C_Finalize( NULL );
-
+    xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 }
 
@@ -134,11 +197,7 @@ void test_pkcs11_C_InitializeMemFail( void )
     CK_RV xResult = CKR_OK;
 
     xQueueCreateMutex_IgnoreAndReturn( NULL );
-    CRYPTO_Init_Ignore();
-    mbedtls_entropy_init_Ignore();
-    mbedtls_ctr_drbg_init_Ignore();
-    mbedtls_ctr_drbg_seed_IgnoreAndReturn( 0 );
-    xResult = C_Initialize( NULL );
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
 
     TEST_ASSERT_EQUAL( CKR_HOST_MEMORY, xResult );
 }
@@ -151,14 +210,10 @@ void test_pkcs11_C_InitializeSeedFail( void )
 {
     CK_RV xResult = CKR_OK;
 
+    mbedtls_ctr_drbg_seed_IgnoreAndReturn( 1 );
     /* Hack: Giving out pointer to xResult when creating a mutex. This unit testcase
      * will never use the actual mutex. */
-    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
-    CRYPTO_Init_Ignore();
-    mbedtls_entropy_init_Ignore();
-    mbedtls_ctr_drbg_init_Ignore();
-    mbedtls_ctr_drbg_seed_IgnoreAndReturn( 1 );
-    xResult = C_Initialize( NULL );
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
 
     TEST_ASSERT_EQUAL( CKR_FUNCTION_FAILED, xResult );
 }
@@ -171,52 +226,18 @@ void test_pkcs11_C_InitializeInitTwice( void )
 {
     CK_RV xResult = CKR_OK;
 
-    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
-    CRYPTO_Init_Ignore();
-    mbedtls_entropy_init_Ignore();
-    mbedtls_ctr_drbg_init_Ignore();
-    mbedtls_ctr_drbg_seed_IgnoreAndReturn( 0 );
-    xResult = C_Initialize( NULL );
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
 
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = C_Initialize( NULL );
     TEST_ASSERT_EQUAL( CKR_CRYPTOKI_ALREADY_INITIALIZED, xResult );
 
-    mbedtls_entropy_free_CMockIgnore();
-    mbedtls_ctr_drbg_free_CMockIgnore();
-    vQueueDelete_CMockIgnore();
-    xResult = C_Finalize( NULL );
-
+    xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 }
 
 /* ======================  TESTING C_Finalize  ============================ */
-
-/*!
- * @brief C_Finalize happy path.
- *
- */
-void test_pkcs11_C_Finalize( void )
-{
-    CK_RV xResult = CKR_OK;
-
-    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
-    CRYPTO_Init_Ignore();
-    mbedtls_entropy_init_Ignore();
-    mbedtls_ctr_drbg_init_Ignore();
-    mbedtls_ctr_drbg_seed_IgnoreAndReturn( 0 );
-    xResult = C_Initialize( NULL );
-
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
-
-    mbedtls_entropy_free_CMockIgnore();
-    mbedtls_ctr_drbg_free_CMockIgnore();
-    vQueueDelete_CMockIgnore();
-    xResult = C_Finalize( NULL );
-
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
-}
 
 /*!
  * @brief C_Finalize initialize was not already called.
@@ -226,11 +247,7 @@ void test_pkcs11_C_FinalizeUninitialized( void )
 {
     CK_RV xResult = CKR_OK;
 
-    mbedtls_entropy_free_CMockIgnore();
-    mbedtls_ctr_drbg_free_CMockIgnore();
-    vQueueDelete_CMockIgnore();
-    xResult = C_Finalize( NULL );
-
+    xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_CRYPTOKI_NOT_INITIALIZED, xResult );
 }
 
@@ -279,4 +296,397 @@ void test_pkcs11_C_GetFunctionListBadArgs( void )
     TEST_ASSERT_EQUAL( CKR_ARGUMENTS_BAD, xResult );
 }
 
+/* ======================  TESTING C_GetSlotList  ============================ */
+
+/*!
+ * @brief C_GetSlotList happy path.
+ *
+ */
+void test_pkcs11_C_GetSlotList( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SLOT_ID_PTR pxSlotId = NULL;
+    CK_ULONG xSlotCount = 0;
+    CK_BBOOL xTokenPresent = CK_TRUE;
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = C_GetSlotList( xTokenPresent, pxSlotId, &xSlotCount );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( 1, xSlotCount );
+
+    pxSlotId = pvPkcs11MallocCb( sizeof( CK_SLOT_ID ) * xSlotCount, 1 );
+    memset( pxSlotId, 0, sizeof( CK_SLOT_ID ) * 1 );
+
+    xResult = C_GetSlotList( xTokenPresent, pxSlotId, &xSlotCount );
+
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( 1, xSlotCount );
+    TEST_ASSERT_EQUAL( 1, pxSlotId[0] );
+
+    vPkcs11FreeCb( pxSlotId, 1 );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+
+/*!
+ * @brief C_GetSlotList NULL SlotList.
+ *
+ */
+void test_pkcs11_C_GetSlotListNullSlot( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_ULONG xSlotCount = 0;
+    CK_BBOOL xTokenPresent = CK_TRUE;
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = C_GetSlotList( xTokenPresent, NULL, &xSlotCount );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( 1, xSlotCount );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+
+/*!
+ * @brief C_GetSlotList NULL SlotCount.
+ *
+ */
+void test_pkcs11_C_GetSlotListNullCount( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_BBOOL xTokenPresent = CK_TRUE;
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = C_GetSlotList( xTokenPresent, NULL, NULL );
+    TEST_ASSERT_EQUAL( CKR_ARGUMENTS_BAD, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+
+/*!
+ * @brief C_GetSlotList 0 object count, valid slotlist.
+ *
+ */
+void test_pkcs11_C_GetSlotListBadObjCount( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SLOT_ID_PTR pxSlotId = NULL;
+    CK_ULONG xSlotCount = 0;
+    CK_BBOOL xTokenPresent = CK_TRUE;
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    pxSlotId = pvPkcs11MallocCb( sizeof( CK_SLOT_ID ) * 1, 1 );
+    memset( pxSlotId, 0, sizeof( CK_SLOT_ID ) * 1 );
+    xResult = C_GetSlotList( xTokenPresent, pxSlotId, &xSlotCount );
+
+    TEST_ASSERT_EQUAL( CKR_BUFFER_TOO_SMALL, xResult );
+    TEST_ASSERT_EQUAL( 0, xSlotCount );
+    TEST_ASSERT_EQUAL( 0, pxSlotId[0] );
+
+    vPkcs11FreeCb( pxSlotId, 1 );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+
+/*!
+ * @brief C_GetSlotList PKCS #11 Not initialized.
+ *
+ */
+void test_pkcs11_C_GetSlotListUninit( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SLOT_ID_PTR pxSlotId = NULL;
+    CK_ULONG xSlotCount = 0;
+    CK_BBOOL xTokenPresent = CK_TRUE;
+
+    pxSlotId = pvPkcs11MallocCb( sizeof( CK_SLOT_ID ) * 1, 1 );
+    memset( pxSlotId, 0, sizeof( CK_SLOT_ID ) * 1 );
+
+    xResult = C_GetSlotList( xTokenPresent, pxSlotId, &xSlotCount );
+
+    TEST_ASSERT_EQUAL( CKR_CRYPTOKI_NOT_INITIALIZED, xResult );
+    TEST_ASSERT_EQUAL( 0, xSlotCount );
+    TEST_ASSERT_EQUAL( 0, pxSlotId[0] );
+
+    vPkcs11FreeCb( pxSlotId, 1 );
+}
+
+/* ======================  TESTING C_GetTokenInfo  ============================ */
+/*!
+ * @brief C_GetTokenInfo Happy path.
+ *
+ * @note this will need to be updated if tokens are implemented in this PKCS #11
+ * stack.
+ *
+ */
+void test_pkcs11_C_GetTokenInfo( void )
+{
+    CK_RV xResult = CKR_OK;
+
+    xResult = C_GetTokenInfo( 0, NULL );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+/* ======================  TESTING C_GetMechanismInfo  ============================ */
+/*!
+ * @brief C_GetMechanismInfo happy path.
+ *
+ */
+void test_pkcs11_C_GetMechanismInfo( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_MECHANISM_TYPE xType = CKM_RSA_PKCS;
+    CK_MECHANISM_INFO xInfo = { 0 };
+
+    xResult = C_GetMechanismInfo( 0, xType, &xInfo );
+
+    TEST_ASSERT_EQUAL( 2048, xInfo.ulMinKeySize );
+    TEST_ASSERT_EQUAL( 2048, xInfo.ulMaxKeySize );
+    TEST_ASSERT_EQUAL( CKF_SIGN, xInfo.flags );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xType = CKM_RSA_X_509;
+    memset( &xInfo, 0, sizeof( CK_MECHANISM_INFO ) );
+    xResult = C_GetMechanismInfo( 0, xType, &xInfo );
+
+    TEST_ASSERT_EQUAL( 2048, xInfo.ulMinKeySize );
+    TEST_ASSERT_EQUAL( 2048, xInfo.ulMaxKeySize );
+    TEST_ASSERT_EQUAL( CKF_VERIFY, xInfo.flags );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    #if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 )
+    xType = CKM_ECDSA;
+    memset( &xInfo, 0, sizeof( CK_MECHANISM_INFO ) );
+    xResult = C_GetMechanismInfo( 0, xType, &xInfo );
+
+    TEST_ASSERT_EQUAL( 256, xInfo.ulMinKeySize );
+    TEST_ASSERT_EQUAL( 256, xInfo.ulMaxKeySize );
+    TEST_ASSERT_EQUAL( CKF_SIGN | CKF_VERIFY, xInfo.flags );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xType = CKM_EC_KEY_PAIR_GEN;
+    memset( &xInfo, 0, sizeof( CK_MECHANISM_INFO ) );
+    xResult = C_GetMechanismInfo( 0, xType, &xInfo );
+
+    TEST_ASSERT_EQUAL( 256, xInfo.ulMinKeySize );
+    TEST_ASSERT_EQUAL( 256, xInfo.ulMaxKeySize );
+    TEST_ASSERT_EQUAL( CKF_GENERATE_KEY_PAIR, xInfo.flags );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    #endif
+
+    xType = CKM_SHA256;
+    memset( &xInfo, 0, sizeof( CK_MECHANISM_INFO ) );
+    xResult = C_GetMechanismInfo( 0, xType, &xInfo );
+
+    TEST_ASSERT_EQUAL( 0, xInfo.ulMinKeySize );
+    TEST_ASSERT_EQUAL( 0, xInfo.ulMaxKeySize );
+    TEST_ASSERT_EQUAL( CKF_DIGEST, xInfo.flags );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+
+/*!
+ * @brief C_GetMechanismInfo NULL info pointer.
+ *
+ */
+void test_pkcs11_C_GetMechanismInfoNullInfoPtr( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_MECHANISM_TYPE xType = CKM_RSA_PKCS;
+
+    xResult = C_GetMechanismInfo( 0, xType, NULL );
+    TEST_ASSERT_EQUAL( CKR_ARGUMENTS_BAD, xResult );
+} 
+
+/*!
+ * @brief C_GetMechanismInfo Bad Mechanism.
+ *
+ */
+void test_pkcs11_C_GetMechanismInfoBadMech( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_MECHANISM_TYPE xType = -1;
+    CK_MECHANISM_INFO xInfo = { 0 };
+
+    xResult = C_GetMechanismInfo( 0, xType, &xInfo );
+    TEST_ASSERT_EQUAL( CKR_MECHANISM_INVALID , xResult );
+} 
+
+/* ======================  TESTING C_InitToken  ============================ */
+/*!
+ * @brief C_InitToken Happy path.
+ *
+ * @note this will need to be updated if tokens are supported
+ *
+ */
+void test_pkcs11_C_InitToken( void )
+{
+    CK_RV xResult = CKR_OK;
+
+    xResult = C_InitToken( 0, NULL, 0, NULL );
+    TEST_ASSERT_EQUAL( CKR_OK , xResult );
+} 
+/* ======================  TESTING C_OpenSession  ============================ */
+/*!
+ * @brief C_OpenSession happy path.
+ *
+ */
+void test_pkcs11_C_OpenSession( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    vPkcs11FreeCb( ( void * ) xSession, 1 );
+}
+
+/*!
+ * @brief C_OpenSession PKCS #11 Uninitialized.
+ *
+ */
+void test_pkcs11_C_OpenSessionUninit( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
+
+    xResult = C_OpenSession( 0, xFlags, NULL, 0, &xSession );
+    TEST_ASSERT_EQUAL( CKR_CRYPTOKI_NOT_INITIALIZED, xResult );
+}
+
+/*!
+ * @brief C_OpenSession bad args.
+ *
+ */
+void test_pkcs11_C_OpenSessionBadArgs( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = C_OpenSession( 0, xFlags, NULL, 0, NULL );
+    TEST_ASSERT_EQUAL( CKR_ARGUMENTS_BAD, xResult );
+
+    xResult = C_OpenSession( 0, CKF_RW_SESSION, NULL, 0, &xSession );
+    TEST_ASSERT_EQUAL( CKR_SESSION_PARALLEL_NOT_SUPPORTED, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+
+/* ======================  TESTING C_OpenSession  ============================ */
+/*!
+ * @brief C_CloseSession happy path.
+ *
+ */
+void test_pkcs11_C_CloseSession( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    
+    prvCloseSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+/* ======================  TESTING C_Login  ============================ */
+/*!
+ * @brief C_Login happy path.
+ *
+ * @note This test will need to be updated if support is added for C_Login
+ *
+ */
+void test_pkcs11_C_Login( void )
+{
+    CK_RV xResult = CKR_OK;
+    xResult = C_Login( 0, 0, NULL, 0 );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+
+/* ======================  TESTING C_CreateObject  ============================ */
+/*!
+ * @brief C_CreateObject happy path.
+ *
+ */
+void test_pkcs11_C_CreateObject( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
+#define EC_PARAMS_LENGTH    10
+#define EC_D_LENGTH         32
+    CK_KEY_TYPE xPrivateKeyType = CKK_EC;
+    CK_OBJECT_CLASS xPrivateKeyClass = CKO_PRIVATE_KEY;
+    CK_BBOOL xTrue = CK_TRUE;
+    CK_BYTE * pxD;               /* Private value D. */
+    CK_BYTE * pxEcParams = NULL; /* DER-encoding of an ANSI X9.62 Parameters value */
+    pxEcParams = ( CK_BYTE * ) ( "\x06\x08" MBEDTLS_OID_EC_GRP_SECP256R1 );
+    pxD = pvPkcs11MallocCb( EC_D_LENGTH, 1 );
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    CK_ATTRIBUTE xPrivateKeyTemplate[] =
+    {
+        { CKA_CLASS,     &xPrivateKeyClass, sizeof( CK_OBJECT_CLASS )                        },
+        { CKA_KEY_TYPE,  &xPrivateKeyType,  sizeof( CK_KEY_TYPE )                            },
+        { CKA_LABEL,     pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS, ( CK_ULONG ) strlen( ( const char * ) pucLabel ) },
+        { CKA_TOKEN,     &xTrue,            sizeof( CK_BBOOL )                               },
+        { CKA_SIGN,      &xTrue,            sizeof( CK_BBOOL )                               },
+        { CKA_EC_PARAMS, pxEcParams,        EC_PARAMS_LENGTH                                 },
+        { CKA_VALUE,     pxD,               EC_D_LENGTH                                      }
+    };
+    CK_OBJECT_HANDLE xObject = 0;
+
+    mbedtls_pk_init_CMock_Ignore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    prvCloseSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    vPkcs11FreeCb( ( void * ) xSession, 1 );
+}
 /* ======================  END TESTING ============================ */

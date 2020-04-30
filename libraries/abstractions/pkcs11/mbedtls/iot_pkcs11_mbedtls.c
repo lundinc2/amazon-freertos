@@ -489,20 +489,12 @@ CK_RV prvMbedTLS_Initialize( void )
 {
     CK_RV xResult = CKR_OK;
 
-    if( xP11Context.xIsInitialized == CK_TRUE )
-    {
-        xResult = CKR_CRYPTOKI_ALREADY_INITIALIZED;
-    }
+    memset( &xP11Context, 0, sizeof( xP11Context ) );
+    xP11Context.xObjectList.xMutex = xSemaphoreCreateMutex();
 
-    if( xResult == CKR_OK )
+    if( xP11Context.xObjectList.xMutex == NULL )
     {
-        memset( &xP11Context, 0, sizeof( xP11Context ) );
-        xP11Context.xObjectList.xMutex = xSemaphoreCreateMutex();
-
-        if( xP11Context.xObjectList.xMutex == NULL )
-        {
-            xResult = CKR_HOST_MEMORY;
-        }
+        xResult = CKR_HOST_MEMORY;
     }
 
     if( xResult == CKR_OK )
@@ -1051,6 +1043,10 @@ CK_DECLARE_FUNCTION( CK_RV, C_GetMechanismInfo )( CK_SLOT_ID xSlotID,
     ( void ) xSlotID;
 
     CK_RV xResult = CKR_MECHANISM_INVALID;
+    if( pInfo == NULL )
+    {
+        xResult = CKR_ARGUMENTS_BAD;
+    }
     struct CryptoMechanisms
     {
         CK_MECHANISM_TYPE xType;
@@ -1068,16 +1064,19 @@ CK_DECLARE_FUNCTION( CK_RV, C_GetMechanismInfo )( CK_SLOT_ID xSlotID,
     };
     uint32_t ulMech = 0;
 
-    /* Look for the requested mechanism in the above table. */
-    for( ; ulMech < sizeof( pxSupportedMechanisms ) / sizeof( pxSupportedMechanisms[ 0 ] ); ulMech++ )
+    if( xResult == CKR_MECHANISM_INVALID )
     {
-        if( pxSupportedMechanisms[ ulMech ].xType == type )
+        /* Look for the requested mechanism in the above table. */
+        for( ; ulMech < sizeof( pxSupportedMechanisms ) / sizeof( pxSupportedMechanisms[ 0 ] ); ulMech++ )
         {
-            /* The mechanism is supported. Copy out the details and break
-             * out of the loop. */
-            memcpy( pInfo, &( pxSupportedMechanisms[ ulMech ].xInfo ), sizeof( CK_MECHANISM_INFO ) );
-            xResult = CKR_OK;
-            break;
+            if( pxSupportedMechanisms[ ulMech ].xType == type )
+            {
+                /* The mechanism is supported. Copy out the details and break
+                 * out of the loop. */
+                memcpy( pInfo, &( pxSupportedMechanisms[ ulMech ].xInfo ), sizeof( CK_MECHANISM_INFO ) );
+                xResult = CKR_OK;
+                break;
+            }
         }
     }
 
@@ -1138,9 +1137,6 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
 { /*lint !e9072 It's OK to have different parameter name. */
     CK_RV xResult = CKR_OK;
     P11SessionPtr_t pxSessionObj = NULL;
-    CK_BBOOL xSessionMemAllocated = CK_FALSE;
-    CK_BBOOL xSignMutexCreated = CK_FALSE;
-    CK_BBOOL xVerifyMutexCreated = CK_FALSE;
 
     ( void ) ( xSlotID );
     ( void ) ( pvApplication );
@@ -1157,9 +1153,8 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
     {
         xResult = CKR_ARGUMENTS_BAD;
     }
-
     /* For legacy reasons, the CKF_SERIAL_SESSION bit MUST always be set. */
-    if( 0 == ( CKF_SERIAL_SESSION & xFlags ) )
+    else if( 0 == ( CKF_SERIAL_SESSION & xFlags ) )
     {
         xResult = CKR_SESSION_PARALLEL_NOT_SUPPORTED;
     }
@@ -1174,10 +1169,6 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
         if( NULL == pxSessionObj )
         {
             xResult = CKR_HOST_MEMORY;
-        }
-        else
-        {
-            xSessionMemAllocated = CK_TRUE;
         }
 
         /*
@@ -1194,20 +1185,12 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
         {
             xResult = CKR_HOST_MEMORY;
         }
-        else
-        {
-            xSignMutexCreated = CK_TRUE;
-        }
 
         pxSessionObj->xVerifyMutex = xSemaphoreCreateMutex();
 
         if( NULL == pxSessionObj->xVerifyMutex )
         {
             xResult = CKR_HOST_MEMORY;
-        }
-        else
-        {
-            xVerifyMutexCreated = CK_TRUE;
         }
     }
 
@@ -1216,16 +1199,10 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
         /*
          * Assign the session.
          */
-
         pxSessionObj->ulState =
             0u != ( xFlags & CKF_RW_SESSION ) ? CKS_RW_PUBLIC_SESSION : CKS_RO_PUBLIC_SESSION;
         pxSessionObj->xOpened = CK_TRUE;
 
-        /*
-         * Return the session.
-         */
-
-        *pxSession = ( CK_SESSION_HANDLE ) pxSessionObj; /*lint !e923 Allow casting pointer to integer type for handle. */
     }
 
     /*
@@ -1240,20 +1217,24 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
 
     if( CKR_OK != xResult )
     {
-        if( xSessionMemAllocated == CK_TRUE )
+        if( pxSessionObj != NULL )
         {
-            if( xSignMutexCreated == CK_TRUE )
+            if( pxSessionObj->xSignMutex != NULL )
             {
                 vSemaphoreDelete( pxSessionObj->xSignMutex );
             }
 
-            if( xVerifyMutexCreated == CK_TRUE )
+            if( pxSessionObj->xVerifyMutex != NULL )
             {
                 vSemaphoreDelete( pxSessionObj->xVerifyMutex );
             }
 
             vPortFree( pxSessionObj );
         }
+    }
+    else
+    {
+        *pxSession = ( CK_SESSION_HANDLE ) pxSessionObj; /*lint !e923 Allow casting pointer to integer type for handle. */
     }
 
     return xResult;

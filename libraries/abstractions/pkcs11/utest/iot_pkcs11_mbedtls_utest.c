@@ -40,6 +40,7 @@
 #include "mock_sha256.h"
 #include "mock_pk.h"
 #include "mock_ecp.h"
+#include "mock_rsa.h"
 #include "mock_bignum.h"
 #include "mock_portable.h"
 
@@ -56,8 +57,36 @@
 #include "unity.h"
 
 
+/* TODO: Add globals banner */
+#define EC_PARAMS_LENGTH    10
+#define EC_D_LENGTH         32
 
 static uint16_t usMallocFreeCalls = 0;
+
+
+/* Length parameters for importing RSA-2048 private keys. */
+#define MODULUS_LENGTH        pkcs11RSA_2048_MODULUS_BITS / 8
+#define E_LENGTH              3
+#define D_LENGTH              pkcs11RSA_2048_MODULUS_BITS / 8
+#define PRIME_1_LENGTH        128
+#define PRIME_2_LENGTH        128
+#define EXPONENT_1_LENGTH     128
+#define EXPONENT_2_LENGTH     128
+#define COEFFICIENT_LENGTH    128
+
+/* Adding one to all of the lengths because ASN1 may pad a leading 0 byte
+ * to numbers that could be interpreted as negative */
+typedef struct RsaParams_t
+{
+    CK_BYTE modulus[ MODULUS_LENGTH + 1 ];
+    CK_BYTE e[ E_LENGTH + 1 ];
+    CK_BYTE d[ D_LENGTH + 1 ];
+    CK_BYTE prime1[ PRIME_1_LENGTH + 1 ];
+    CK_BYTE prime2[ PRIME_2_LENGTH + 1 ];
+    CK_BYTE exponent1[ EXPONENT_1_LENGTH + 1 ];
+    CK_BYTE exponent2[ EXPONENT_2_LENGTH + 1 ];
+    CK_BYTE coefficient[ COEFFICIENT_LENGTH + 1 ];
+} RsaParams_t;
 
 /* ==========================  CALLBACK FUNCTIONS =========================== */
 
@@ -644,10 +673,10 @@ void test_pkcs11_C_Login( void )
 
 /* ======================  TESTING C_CreateObject  ============================ */
 /*!
- * @brief C_CreateObject happy path.
+ * @brief C_CreateObject Creating an EC private key.
  *
  */
-void test_pkcs11_C_CreateObject( void )
+void test_pkcs11_C_CreateObjectECPrivKey( void )
 {
     CK_RV xResult = CKR_OK;
     CK_SESSION_HANDLE xSession = 0;
@@ -692,6 +721,85 @@ void test_pkcs11_C_CreateObject( void )
     mbedtls_ecp_group_init_CMockIgnore();
     mbedtls_ecp_group_load_IgnoreAndReturn( 0 );
     mbedtls_mpi_read_binary_IgnoreAndReturn( 0 );
+    mbedtls_pk_write_key_der_IgnoreAndReturn( 1 );
+    mbedtls_pk_free_CMockIgnore();
+    PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
+    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
+    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    vPortFree_Stub( vPkcs11FreeCb );
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    prvCloseSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    vPkcs11FreeCb( ( void * ) xSession, 1 );
+}
+/*!
+ * @brief C_CreateObject happy path.
+ *
+ */
+void test_pkcs11_C_CreateObjectRSAPrivKey( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
+    CK_KEY_TYPE xPrivateKeyType = CKK_RSA;
+    CK_OBJECT_CLASS xPrivateKeyClass = CKO_PRIVATE_KEY;
+    CK_BBOOL xTrue = CK_TRUE;
+    RsaParams_t * pxRsaParams = NULL;
+    pxRsaParams = pvPortMalloc( sizeof( RsaParams_t ) );
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    char * pucLabel = pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS;
+
+        CK_ATTRIBUTE xPrivateKeyTemplate[] =
+        {
+            { CKA_CLASS,            &xPrivateKeyClass,            sizeof( CK_OBJECT_CLASS )                        },
+            { CKA_KEY_TYPE,         &xPrivateKeyType,             sizeof( CK_KEY_TYPE )                            },
+            { CKA_LABEL,            pucLabel,                     ( CK_ULONG ) strlen( ( const char * ) pucLabel ) },
+            { CKA_TOKEN,            &xTrue,                       sizeof( CK_BBOOL )                               },
+            { CKA_SIGN,             &xTrue,                       sizeof( CK_BBOOL )                               },
+            { CKA_MODULUS,          pxRsaParams->modulus + 1,     MODULUS_LENGTH                                   },
+            { CKA_PRIVATE_EXPONENT, pxRsaParams->d + 1,           D_LENGTH                                         },
+            { CKA_PUBLIC_EXPONENT,  pxRsaParams->e + 1,           E_LENGTH                                         },
+            { CKA_PRIME_1,          pxRsaParams->prime1 + 1,      PRIME_1_LENGTH                                   },
+            { CKA_PRIME_2,          pxRsaParams->prime2 + 1,      PRIME_2_LENGTH                                   },
+            { CKA_EXPONENT_1,       pxRsaParams->exponent1 + 1,   EXPONENT_1_LENGTH                                },
+            { CKA_EXPONENT_2,       pxRsaParams->exponent2 + 1,   EXPONENT_2_LENGTH                                },
+            { CKA_COEFFICIENT,      pxRsaParams->coefficient + 1, COEFFICIENT_LENGTH                               }
+        };
+
+    CK_OBJECT_HANDLE xObject = 0;
+
+    mbedtls_pk_init_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    PKCS11_PAL_FindObject_IgnoreAndReturn( &xResult );
+    PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
+    mbedtls_pk_parse_key_IgnoreAndReturn( 0 );
+    PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    mbedtls_rsa_init_CMockIgnore();
+    mbedtls_rsa_import_raw_IgnoreAndReturn( 1 );
+    mbedtls_mpi_read_binary_IgnoreAndReturn( 8 );
+    mbedtls_pk_write_key_der_IgnoreAndReturn( 1 );
+    mbedtls_pk_free_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
+    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
+    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    vPortFree_Stub( vPkcs11FreeCb );
     xResult = C_CreateObject( xSession,
                               ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
                               sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),

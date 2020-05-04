@@ -75,16 +75,14 @@
 
 #define EC_PUB_KEY_INITIALIZER                                                     \
     {                                                                              \
-        { CKA_CLASS, &xPrivateKeyClass, sizeof( CK_OBJECT_CLASS ) },               \
-        { CKA_KEY_TYPE, &xPrivateKeyType, sizeof( CK_KEY_TYPE ) },                 \
-        { CKA_LABEL, pucLabel, ( CK_ULONG ) strlen( ( const char * ) pucLabel ) }, \
-        { CKA_TOKEN, &xTrue, sizeof( CK_BBOOL ) },                                 \
-        { CKA_SIGN, &xTrue, sizeof( CK_BBOOL ) },                                  \
-        { CKA_EC_PARAMS, pxEcParams, EC_PARAMS_LENGTH },                           \
-        { CKA_VALUE, pxD, EC_D_LENGTH }                                            \
+        { CKA_CLASS,     &xPublicKeyClass,         sizeof( xPublicKeyClass )                             }, \
+        { CKA_KEY_TYPE,  &xPublicKeyType, sizeof( xPublicKeyType )                     }, \
+        { CKA_TOKEN,     &xTrue,          sizeof( xTrue )                              }, \
+        { CKA_VERIFY,    &xTrue,          sizeof( xTrue )                              }, \
+        { CKA_EC_PARAMS, pxEcParams,       sizeof( pxEcParams )                          }, \
+        { CKA_EC_POINT,  pxEcPoint,        xLength + 2                                  }, \
+        { CKA_LABEL,     pucLabel,          strlen( ( const char * ) pucLabel ) } \
     }
-
-
 
 /* Length parameters for importing RSA-2048 private keys. */
 #define MODULUS_LENGTH        pkcs11RSA_2048_MODULUS_BITS / 8
@@ -191,7 +189,7 @@ static CK_RV prvInitializePkcs11()
 {
     CK_RV xResult = CKR_OK;
 
-    xQueueCreateMutex_IgnoreAndReturn( 1 );
+    xQueueCreateMutex_IgnoreAndReturn( (SemaphoreHandle_t ) 1 );
     CRYPTO_Init_Ignore();
     mbedtls_entropy_init_Ignore();
     mbedtls_ctr_drbg_init_Ignore();
@@ -789,21 +787,18 @@ void test_pkcs11_C_CreateObjectECPubKey( void )
 {
     CK_RV xResult = CKR_OK;
     CK_SESSION_HANDLE xSession = 0;
-    CK_KEY_TYPE xPrivateKeyType = CKK_EC;
-    CK_OBJECT_CLASS xPrivateKeyClass = CKO_PUBLIC_KEY;
+    CK_KEY_TYPE xPublicKeyType = CKK_EC;
+    CK_OBJECT_CLASS xPublicKeyClass = CKO_PUBLIC_KEY;
     CK_BBOOL xTrue = CK_TRUE;
     char * pucLabel = pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS;
+    size_t xLength = 256;
     /* DER-encoding of an ANSI X9.62 Parameters value */
-    CK_BYTE * pxEcParams = ( CK_BYTE * ) ( "\x06\x08" MBEDTLS_OID_EC_GRP_SECP256R1 );
+    CK_BYTE pxEcParams[] = pkcs11DER_ENCODED_OID_P256;
     CK_OBJECT_HANDLE xObject = 0;
 
-    /* Private value D. */
-    CK_BYTE * pxD = pvPkcs11MallocCb( EC_D_LENGTH, 1 );
-    TEST_ASSERT_NOT_EQUAL( NULL, pxD );
+    CK_BYTE pxEcPoint[ 256 ] = { 0 };
 
-    /* Reuse the private key initializer but the paramters used indicate 
-     * public key work */
-    CK_ATTRIBUTE xPublicKeyTemplate[] = EC_PRIV_KEY_INITIALIZER;
+    CK_ATTRIBUTE xPublicKeyTemplate[] = EC_PUB_KEY_INITIALIZER;
 
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );

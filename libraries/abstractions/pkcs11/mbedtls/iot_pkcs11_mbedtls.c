@@ -1043,10 +1043,12 @@ CK_DECLARE_FUNCTION( CK_RV, C_GetMechanismInfo )( CK_SLOT_ID xSlotID,
     ( void ) xSlotID;
 
     CK_RV xResult = CKR_MECHANISM_INVALID;
+
     if( pInfo == NULL )
     {
         xResult = CKR_ARGUMENTS_BAD;
     }
+
     struct CryptoMechanisms
     {
         CK_MECHANISM_TYPE xType;
@@ -1202,7 +1204,6 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
         pxSessionObj->ulState =
             0u != ( xFlags & CKF_RW_SESSION ) ? CKS_RW_PUBLIC_SESSION : CKS_RO_PUBLIC_SESSION;
         pxSessionObj->xOpened = CK_TRUE;
-
     }
 
     /*
@@ -1442,12 +1443,12 @@ CK_RV prvCreateCertificate( CK_ATTRIBUTE_PTR pxTemplate,
  *
  */
 static void prvGetKeyType( CK_KEY_TYPE * pxKeyType,
-                    CK_ATTRIBUTE_PTR pxTemplate,
-                    CK_ULONG ulCount )
+                           CK_ATTRIBUTE_PTR pxTemplate,
+                           CK_ULONG ulCount )
 {
     uint32_t ulIndex;
     CK_ATTRIBUTE xAttribute;
-    
+
     *pxKeyType = PKCS11_INVALID_KEY_TYPE;
 
     for( ulIndex = 0; ulIndex < ulCount; ulIndex++ )
@@ -1513,7 +1514,7 @@ CK_RV prvGetExistingKeyComponent( CK_OBJECT_HANDLE_PTR pxPalHandle,
     CK_BBOOL xIsPrivate = CK_TRUE;
     BaseType_t xResult = CKR_OK;
     int lMbedResult = 0;
-    int lMbedTLSResult = 0;
+
     *pxPalHandle = CK_INVALID_HANDLE;
 
     if( 0 == memcmp( pxLabel->pValue, pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS, pxLabel->ulValueLen ) )
@@ -1547,11 +1548,11 @@ CK_RV prvGetExistingKeyComponent( CK_OBJECT_HANDLE_PTR pxPalHandle,
     if( lMbedResult != 0 )
     {
         PKCS11_PRINT( ( "mbedTLS pk parse failed with error %s : %s \r\n",
-                        mbedtlsHighLevelCodeOrDefault( lMbedTLSResult ),
-                        mbedtlsLowLevelCodeOrDefault( lMbedTLSResult ) ) );
+                        mbedtlsHighLevelCodeOrDefault( lMbedResult ),
+                        mbedtlsLowLevelCodeOrDefault( lMbedResult ) ) );
         *pxPalHandle = CK_INVALID_HANDLE;
     }
-    
+
     return xResult;
 }
 
@@ -1573,7 +1574,6 @@ CK_RV prvCreateEcPrivateKey( mbedtls_pk_context * pxMbedContext,
     int lMbedReturn = 0;
     CK_BBOOL xBool = CK_FALSE;
     uint32_t ulIndex;
-    int lMbedTLSResult = 0;
     CK_ATTRIBUTE xAttribute;
 
     /* Key will be assembled in the mbedTLS key context and then exported to DER for storage. */
@@ -1645,8 +1645,8 @@ CK_RV prvCreateEcPrivateKey( mbedtls_pk_context * pxMbedContext,
                 if( lMbedReturn != 0 )
                 {
                     PKCS11_PRINT( ( "mbedTLS mpi read binary failed with error %s : %s \r\n",
-                                    mbedtlsHighLevelCodeOrDefault( lMbedTLSResult  ),
-                                    mbedtlsLowLevelCodeOrDefault( lMbedTLSResult ) ) );
+                                    mbedtlsHighLevelCodeOrDefault( lMbedReturn ),
+                                    mbedtlsLowLevelCodeOrDefault( lMbedReturn ) ) );
                     xResult = CKR_ATTRIBUTE_VALUE_INVALID;
                 }
 
@@ -1679,7 +1679,6 @@ CK_RV prvCreateRsaPrivateKey( mbedtls_pk_context * pxMbedContext,
     CK_RV xResult = CKR_OK;
     mbedtls_rsa_context * pxRsaContext;
     int lMbedReturn = 0;
-    int lMbedTLSResult = 0;
     CK_BBOOL xBool;
     uint32_t ulIndex;
     CK_ATTRIBUTE xAttribute;
@@ -1804,10 +1803,9 @@ CK_RV prvCreateRsaPrivateKey( mbedtls_pk_context * pxMbedContext,
 
     if( lMbedReturn != 0 )
     {
-
         PKCS11_PRINT( ( "mbedTLS create RSA failed with error %s : %s \r\n",
-                        mbedtlsHighLevelCodeOrDefault( lMbedTLSResult ),
-                        mbedtlsLowLevelCodeOrDefault( lMbedTLSResult ) ) );
+                        mbedtlsHighLevelCodeOrDefault( lMbedReturn ),
+                        mbedtlsLowLevelCodeOrDefault( lMbedReturn ) ) );
         xResult = CKR_ATTRIBUTE_VALUE_INVALID;
     }
 
@@ -1829,7 +1827,6 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
     mbedtls_pk_context xMbedContext = { 0 };
     int lDerKeyLength = 0;
     int lActualKeyLength = 0;
-    int lMbedTLSResult = 0;
     int lMbedTLSReturn = 0;
     int compare = 0;
     CK_BYTE_PTR pxDerKey = NULL;
@@ -1867,10 +1864,11 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
 
     #if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 )
         /* CKK_EC = CKK_ECDSA. */
-        else if( xKeyType == CKK_EC ) 
+        else if( xKeyType == CKK_EC )
         {
             /* Key will be assembled in the mbedTLS key context and then exported to DER for storage. */
             prvGetLabel( &pxLabel, pxTemplate, ulCount );
+
             if( pxLabel == NULL )
             {
                 xResult = CKR_ARGUMENTS_BAD;
@@ -1900,15 +1898,15 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
                     xMbedContext.pk_ctx = pxKeyPair;
                     mbedtls_ecp_keypair_init( pxKeyPair );
                     mbedtls_ecp_group_init( &pxKeyPair->grp );
-                    
+
                     /*/ * At this time, only P-256 curves are supported. * / */
                     lMbedTLSReturn = mbedtls_ecp_group_load( &pxKeyPair->grp, MBEDTLS_ECP_DP_SECP256R1 );
 
                     if( lMbedTLSReturn != 0 )
                     {
                         PKCS11_PRINT( ( "mbedTLS ECP curve load failed with error %s : %s \r\n",
-                                        mbedtlsHighLevelCodeOrDefault( lMbedTLSResult ),
-                                        mbedtlsLowLevelCodeOrDefault( lMbedTLSResult ) ) );
+                                        mbedtlsHighLevelCodeOrDefault( lMbedTLSReturn ),
+                                        mbedtlsLowLevelCodeOrDefault( lMbedTLSReturn ) ) );
                         xResult = CKR_FUNCTION_FAILED;
                     }
                 }
@@ -1919,7 +1917,7 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
             }
 
             /* Stopped here */
-            if( xResult == CKR_OK ) 
+            if( xResult == CKR_OK )
             {
                 xResult = prvCreateEcPrivateKey( &xMbedContext,
                                                  &pxLabel,
@@ -1952,8 +1950,8 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
         if( lDerKeyLength < 0 )
         {
             PKCS11_PRINT( ( "mbedTLS pk_write_key_der failed with error %s : %s \r\n",
-                            mbedtlsHighLevelCodeOrDefault( lMbedTLSResult ),
-                            mbedtlsLowLevelCodeOrDefault( lMbedTLSResult ) ) );
+                            mbedtlsHighLevelCodeOrDefault( lDerKeyLength ),
+                            mbedtlsLowLevelCodeOrDefault( lDerKeyLength ) ) );
             xResult = CKR_ATTRIBUTE_VALUE_INVALID;
         }
 
@@ -1962,34 +1960,34 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
     }
 
     #if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 )
-    if( xResult == CKR_OK )
-    {
-        /* TODO: Remove this hack.
-         * mbedtls_pk_write_key_der appends empty public
-         * key data when saving EC private key
-         * that does not have a public key associated with it.
-         * a1 04        -> Application identifier of length 4
-         * 03 02     -> Bit string of length 2
-         *    00 00  -> "Public key"
-         * https://forums.mbed.com/t/how-do-i-write-an-ec-private-key-w-no-public-key-to-der-format/4728 */
-        if( xKeyType == CKK_EC ) /* CKK_EC = CKK_ECDSA. */
+        if( xResult == CKR_OK )
         {
-            /* If there was no public key in the structure, this byte
-             * array will be appended to the valid private key.
-             * It must be removed so that we can read the private
-             * key back at a later time. */
-            uint8_t emptyPubKey[ 6 ] = { 0xa1, 0x04, 0x03, 0x02, 0x00, 0x00 };
-            compare = memcmp( &pxDerKey[ MAX_LENGTH_KEY - 6 ], emptyPubKey, 6 );
-
-            if( compare == 0 )
+            /* TODO: Remove this hack.
+             * mbedtls_pk_write_key_der appends empty public
+             * key data when saving EC private key
+             * that does not have a public key associated with it.
+             * a1 04        -> Application identifier of length 4
+             * 03 02     -> Bit string of length 2
+             *    00 00  -> "Public key"
+             * https://forums.mbed.com/t/how-do-i-write-an-ec-private-key-w-no-public-key-to-der-format/4728 */
+            if( xKeyType == CKK_EC ) /* CKK_EC = CKK_ECDSA. */
             {
-                /* Do not write the last 6 bytes to key storage. */
-                pxDerKey[ MAX_LENGTH_KEY - lDerKeyLength + 1 ] -= 6;
-                lActualKeyLength -= 6;
+                /* If there was no public key in the structure, this byte
+                 * array will be appended to the valid private key.
+                 * It must be removed so that we can read the private
+                 * key back at a later time. */
+                uint8_t emptyPubKey[ 6 ] = { 0xa1, 0x04, 0x03, 0x02, 0x00, 0x00 };
+                compare = memcmp( &pxDerKey[ MAX_LENGTH_KEY - 6 ], emptyPubKey, 6 );
+
+                if( compare == 0 )
+                {
+                    /* Do not write the last 6 bytes to key storage. */
+                    pxDerKey[ MAX_LENGTH_KEY - lDerKeyLength + 1 ] -= 6;
+                    lActualKeyLength -= 6;
+                }
             }
         }
-    }
-    #endif
+    #endif /* if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 ) */
 
     /* Save the object to device NVM. */
     if( xResult == CKR_OK )
@@ -2154,6 +2152,7 @@ CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
         else if( xKeyType == CKK_EC ) /* CKK_EC = CKK_ECDSA. */
         {
             prvGetLabel( &pxLabel, pxTemplate, ulCount );
+
             if( pxLabel == NULL )
             {
                 xResult = CKR_ARGUMENTS_BAD;
@@ -2313,7 +2312,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_CreateObject )( CK_SESSION_HANDLE xSession,
                                               CK_ATTRIBUTE_PTR pxTemplate,
                                               CK_ULONG ulCount,
                                               CK_OBJECT_HANDLE_PTR pxObject )
-{ 
+{
     /*lint !e9072 It's OK to have different parameter name. */
     CK_RV xResult = PKCS11_SESSION_VALID_AND_MODULE_INITIALIZED( xSession );
     CK_OBJECT_CLASS xClass = 0;

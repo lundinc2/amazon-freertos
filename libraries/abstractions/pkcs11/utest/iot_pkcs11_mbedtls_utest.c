@@ -62,15 +62,15 @@
 #define EC_PARAMS_LENGTH    10
 #define EC_D_LENGTH         32
 
-#define EC_PRIV_KEY_INITIALIZER \
-    { \
-        { CKA_CLASS,     &xPrivateKeyClass, sizeof( CK_OBJECT_CLASS )                        }, \
-        { CKA_KEY_TYPE,  &xPrivateKeyType,  sizeof( CK_KEY_TYPE )                            }, \
-        { CKA_LABEL,     pucLabel, ( CK_ULONG ) strlen( ( const char * ) pucLabel ) }, \
-        { CKA_TOKEN,     &xTrue,            sizeof( CK_BBOOL )                               }, \
-        { CKA_SIGN,      &xTrue,            sizeof( CK_BBOOL )                               }, \
-        { CKA_EC_PARAMS, pxEcParams,        EC_PARAMS_LENGTH                                 }, \
-        { CKA_VALUE,     pxD,               EC_D_LENGTH                                      } \
+#define EC_PRIV_KEY_INITIALIZER                                                    \
+    {                                                                              \
+        { CKA_CLASS, &xPrivateKeyClass, sizeof( CK_OBJECT_CLASS ) },               \
+        { CKA_KEY_TYPE, &xPrivateKeyType, sizeof( CK_KEY_TYPE ) },                 \
+        { CKA_LABEL, pucLabel, ( CK_ULONG ) strlen( ( const char * ) pucLabel ) }, \
+        { CKA_TOKEN, &xTrue, sizeof( CK_BBOOL ) },                                 \
+        { CKA_SIGN, &xTrue, sizeof( CK_BBOOL ) },                                  \
+        { CKA_EC_PARAMS, pxEcParams, EC_PARAMS_LENGTH },                           \
+        { CKA_VALUE, pxD, EC_D_LENGTH }                                            \
     }
 
 
@@ -84,28 +84,29 @@
 #define EXPONENT_2_LENGTH     128
 #define COEFFICIENT_LENGTH    128
 
-#define RSA_PRIV_KEY_INITIALIZER \
-        { \
-            { CKA_CLASS,            &xPrivateKeyClass,            sizeof( CK_OBJECT_CLASS )                        }, \
-            { CKA_KEY_TYPE,         &xPrivateKeyType,             sizeof( CK_KEY_TYPE )                            }, \
-            { CKA_LABEL,            pucLabel,                     ( CK_ULONG ) strlen( ( const char * ) pucLabel ) }, \
-            { CKA_TOKEN,            &xTrue,                       sizeof( CK_BBOOL )                               }, \
-            { CKA_SIGN,             &xTrue,                       sizeof( CK_BBOOL )                               }, \
-            { CKA_MODULUS,          pxRsaParams->modulus + 1,     MODULUS_LENGTH                                   }, \
-            { CKA_PRIVATE_EXPONENT, pxRsaParams->d + 1,           D_LENGTH                                         }, \
-            { CKA_PUBLIC_EXPONENT,  pxRsaParams->e + 1,           E_LENGTH                                         }, \
-            { CKA_PRIME_1,          pxRsaParams->prime1 + 1,      PRIME_1_LENGTH                                   }, \
-            { CKA_PRIME_2,          pxRsaParams->prime2 + 1,      PRIME_2_LENGTH                                   }, \
-            { CKA_EXPONENT_1,       pxRsaParams->exponent1 + 1,   EXPONENT_1_LENGTH                                }, \
-            { CKA_EXPONENT_2,       pxRsaParams->exponent2 + 1,   EXPONENT_2_LENGTH                                }, \
-            { CKA_COEFFICIENT,      pxRsaParams->coefficient + 1, COEFFICIENT_LENGTH                               } \
-        }
+#define RSA_PRIV_KEY_INITIALIZER                                                   \
+    {                                                                              \
+        { CKA_CLASS, &xPrivateKeyClass, sizeof( CK_OBJECT_CLASS ) },               \
+        { CKA_KEY_TYPE, &xPrivateKeyType, sizeof( CK_KEY_TYPE ) },                 \
+        { CKA_LABEL, pucLabel, ( CK_ULONG ) strlen( ( const char * ) pucLabel ) }, \
+        { CKA_TOKEN, &xTrue, sizeof( CK_BBOOL ) },                                 \
+        { CKA_SIGN, &xTrue, sizeof( CK_BBOOL ) },                                  \
+        { CKA_MODULUS, pxRsaParams->modulus + 1, MODULUS_LENGTH },                 \
+        { CKA_PRIVATE_EXPONENT, pxRsaParams->d + 1, D_LENGTH },                    \
+        { CKA_PUBLIC_EXPONENT, pxRsaParams->e + 1, E_LENGTH },                     \
+        { CKA_PRIME_1, pxRsaParams->prime1 + 1, PRIME_1_LENGTH },                  \
+        { CKA_PRIME_2, pxRsaParams->prime2 + 1, PRIME_2_LENGTH },                  \
+        { CKA_EXPONENT_1, pxRsaParams->exponent1 + 1, EXPONENT_1_LENGTH },         \
+        { CKA_EXPONENT_2, pxRsaParams->exponent2 + 1, EXPONENT_2_LENGTH },         \
+        { CKA_COEFFICIENT, pxRsaParams->coefficient + 1, COEFFICIENT_LENGTH }      \
+    }
 
 /* Malloc calls */
 static uint16_t usMallocFreeCalls = 0;
 
 
 /* Internal struct to facilitate passing RSA params to mbedTLS. */
+
 /* Adding one to all of the lengths because ASN1 may pad a leading 0 byte
  * to numbers that could be interpreted as negative */
 typedef struct RsaParams_t
@@ -121,6 +122,7 @@ typedef struct RsaParams_t
 } RsaParams_t;
 
 /* ==========================  CALLBACK FUNCTIONS =========================== */
+
 /*!
  * @brief Wrapper stub for malloc.
  */
@@ -168,15 +170,16 @@ int suiteTearDown( int numFailures )
 }
 
 /* ==========================  Helper functions  ============================ */
+
 /*!
  * @brief Helper function to initialize PKCS #11.
  *
  */
-static CK_RV  prvInitializePkcs11( SemaphoreHandle_t pxPKCS11Mutex )
+static CK_RV prvInitializePkcs11( SemaphoreHandle_t pxPKCS11Mutex )
 {
     CK_RV xResult = CKR_OK;
 
-    xQueueCreateMutex_IgnoreAndReturn( pxPKCS11Mutex   );
+    xQueueCreateMutex_IgnoreAndReturn( pxPKCS11Mutex );
     CRYPTO_Init_Ignore();
     mbedtls_entropy_init_Ignore();
     mbedtls_ctr_drbg_init_Ignore();
@@ -190,7 +193,7 @@ static CK_RV  prvInitializePkcs11( SemaphoreHandle_t pxPKCS11Mutex )
  * @brief Helper function to initialize PKCS #11.
  *
  */
-static CK_RV prvUninitializePkcs11( )
+static CK_RV prvUninitializePkcs11()
 {
     CK_RV xResult = CKR_OK;
 
@@ -249,7 +252,7 @@ static CK_RV prvCloseSession( CK_SESSION_HANDLE_PTR pxSession )
 void test_pkcs11_C_Initialize( void )
 {
     CK_RV xResult = CKR_OK;
-    
+
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
@@ -280,6 +283,7 @@ void test_pkcs11_C_InitializeSeedFail( void )
     CK_RV xResult = CKR_OK;
 
     mbedtls_ctr_drbg_seed_IgnoreAndReturn( 1 );
+
     /* Hack: Giving out pointer to xResult when creating a mutex. This unit testcase
      * will never use the actual mutex. */
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
@@ -392,7 +396,7 @@ void test_pkcs11_C_GetSlotList( void )
 
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
     TEST_ASSERT_EQUAL( 1, xSlotCount );
-    TEST_ASSERT_EQUAL( 1, pxSlotId[0] );
+    TEST_ASSERT_EQUAL( 1, pxSlotId[ 0 ] );
 
     vPkcs11FreeCb( pxSlotId, 1 );
 
@@ -462,7 +466,7 @@ void test_pkcs11_C_GetSlotListBadObjCount( void )
 
     TEST_ASSERT_EQUAL( CKR_BUFFER_TOO_SMALL, xResult );
     TEST_ASSERT_EQUAL( 0, xSlotCount );
-    TEST_ASSERT_EQUAL( 0, pxSlotId[0] );
+    TEST_ASSERT_EQUAL( 0, pxSlotId[ 0 ] );
 
     vPkcs11FreeCb( pxSlotId, 1 );
 
@@ -488,12 +492,13 @@ void test_pkcs11_C_GetSlotListUninit( void )
 
     TEST_ASSERT_EQUAL( CKR_CRYPTOKI_NOT_INITIALIZED, xResult );
     TEST_ASSERT_EQUAL( 0, xSlotCount );
-    TEST_ASSERT_EQUAL( 0, pxSlotId[0] );
+    TEST_ASSERT_EQUAL( 0, pxSlotId[ 0 ] );
 
     vPkcs11FreeCb( pxSlotId, 1 );
 }
 
 /* ======================  TESTING C_GetTokenInfo  ============================ */
+
 /*!
  * @brief C_GetTokenInfo Happy path.
  *
@@ -509,6 +514,7 @@ void test_pkcs11_C_GetTokenInfo( void )
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 }
 /* ======================  TESTING C_GetMechanismInfo  ============================ */
+
 /*!
  * @brief C_GetMechanismInfo happy path.
  *
@@ -536,24 +542,24 @@ void test_pkcs11_C_GetMechanismInfo( void )
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     #if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 )
-    xType = CKM_ECDSA;
-    memset( &xInfo, 0, sizeof( CK_MECHANISM_INFO ) );
-    xResult = C_GetMechanismInfo( 0, xType, &xInfo );
+        xType = CKM_ECDSA;
+        memset( &xInfo, 0, sizeof( CK_MECHANISM_INFO ) );
+        xResult = C_GetMechanismInfo( 0, xType, &xInfo );
 
-    TEST_ASSERT_EQUAL( 256, xInfo.ulMinKeySize );
-    TEST_ASSERT_EQUAL( 256, xInfo.ulMaxKeySize );
-    TEST_ASSERT_EQUAL( CKF_SIGN | CKF_VERIFY, xInfo.flags );
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+        TEST_ASSERT_EQUAL( 256, xInfo.ulMinKeySize );
+        TEST_ASSERT_EQUAL( 256, xInfo.ulMaxKeySize );
+        TEST_ASSERT_EQUAL( CKF_SIGN | CKF_VERIFY, xInfo.flags );
+        TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    xType = CKM_EC_KEY_PAIR_GEN;
-    memset( &xInfo, 0, sizeof( CK_MECHANISM_INFO ) );
-    xResult = C_GetMechanismInfo( 0, xType, &xInfo );
+        xType = CKM_EC_KEY_PAIR_GEN;
+        memset( &xInfo, 0, sizeof( CK_MECHANISM_INFO ) );
+        xResult = C_GetMechanismInfo( 0, xType, &xInfo );
 
-    TEST_ASSERT_EQUAL( 256, xInfo.ulMinKeySize );
-    TEST_ASSERT_EQUAL( 256, xInfo.ulMaxKeySize );
-    TEST_ASSERT_EQUAL( CKF_GENERATE_KEY_PAIR, xInfo.flags );
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
-    #endif
+        TEST_ASSERT_EQUAL( 256, xInfo.ulMinKeySize );
+        TEST_ASSERT_EQUAL( 256, xInfo.ulMaxKeySize );
+        TEST_ASSERT_EQUAL( CKF_GENERATE_KEY_PAIR, xInfo.flags );
+        TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    #endif /* if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 ) */
 
     xType = CKM_SHA256;
     memset( &xInfo, 0, sizeof( CK_MECHANISM_INFO ) );
@@ -576,7 +582,7 @@ void test_pkcs11_C_GetMechanismInfoNullInfoPtr( void )
 
     xResult = C_GetMechanismInfo( 0, xType, NULL );
     TEST_ASSERT_EQUAL( CKR_ARGUMENTS_BAD, xResult );
-} 
+}
 
 /*!
  * @brief C_GetMechanismInfo Bad Mechanism.
@@ -589,10 +595,11 @@ void test_pkcs11_C_GetMechanismInfoBadMech( void )
     CK_MECHANISM_INFO xInfo = { 0 };
 
     xResult = C_GetMechanismInfo( 0, xType, &xInfo );
-    TEST_ASSERT_EQUAL( CKR_MECHANISM_INVALID , xResult );
-} 
+    TEST_ASSERT_EQUAL( CKR_MECHANISM_INVALID, xResult );
+}
 
 /* ======================  TESTING C_InitToken  ============================ */
+
 /*!
  * @brief C_InitToken Happy path.
  *
@@ -604,9 +611,10 @@ void test_pkcs11_C_InitToken( void )
     CK_RV xResult = CKR_OK;
 
     xResult = C_InitToken( 0, NULL, 0, NULL );
-    TEST_ASSERT_EQUAL( CKR_OK , xResult );
-} 
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
 /* ======================  TESTING C_OpenSession  ============================ */
+
 /*!
  * @brief C_OpenSession happy path.
  *
@@ -666,6 +674,7 @@ void test_pkcs11_C_OpenSessionBadArgs( void )
 }
 
 /* ======================  TESTING C_OpenSession  ============================ */
+
 /*!
  * @brief C_CloseSession happy path.
  *
@@ -680,7 +689,7 @@ void test_pkcs11_C_CloseSession( void )
 
     prvOpenSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
-    
+
     prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
@@ -688,6 +697,7 @@ void test_pkcs11_C_CloseSession( void )
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 }
 /* ======================  TESTING C_Login  ============================ */
+
 /*!
  * @brief C_Login happy path.
  *
@@ -697,11 +707,13 @@ void test_pkcs11_C_CloseSession( void )
 void test_pkcs11_C_Login( void )
 {
     CK_RV xResult = CKR_OK;
+
     xResult = C_Login( 0, 0, NULL, 0 );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 }
 
 /* ======================  TESTING C_CreateObject  ============================ */
+
 /*!
  * @brief C_CreateObject Creating an EC private key happy path.
  *
@@ -719,7 +731,8 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
     CK_OBJECT_HANDLE xObject = 0;
 
     /* Private value D. */
-    CK_BYTE * pxD = pvPkcs11MallocCb( EC_D_LENGTH, 1 );    
+    CK_BYTE * pxD = pvPkcs11MallocCb( EC_D_LENGTH, 1 );
+
     TEST_ASSERT_NOT_EQUAL( NULL, pxD );
 
     CK_ATTRIBUTE xPrivateKeyTemplate[] = EC_PRIV_KEY_INITIALIZER;
@@ -783,7 +796,65 @@ void test_pkcs11_C_CreateObjectRSAPrivKey( void )
     CK_OBJECT_HANDLE xObject = 0;
 
     RsaParams_t * pxRsaParams = NULL;
-    pxRsaParams = pvPkcs11MallocCb ( sizeof( RsaParams_t ), 1 );
+
+    pxRsaParams = pvPkcs11MallocCb( sizeof( RsaParams_t ), 1 );
+    TEST_ASSERT_NOT_EQUAL( NULL, pxRsaParams );
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    CK_ATTRIBUTE xPrivateKeyTemplate[] = RSA_PRIV_KEY_INITIALIZER;
+
+    mbedtls_pk_init_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    mbedtls_rsa_init_CMockIgnore();
+    mbedtls_rsa_import_raw_IgnoreAndReturn( 0 );
+    mbedtls_mpi_read_binary_IgnoreAndReturn( 0 );
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    mbedtls_pk_write_key_der_IgnoreAndReturn( 1 );
+    mbedtls_pk_free_CMockIgnore();
+    PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
+    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
+    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    vPortFree_Stub( vPkcs11FreeCb );
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    prvCloseSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    vPkcs11FreeCb( ( void * ) xSession, 1 );
+    vPkcs11FreeCb( ( void * ) pxRsaParams, 1 );
+}
+
+/*
+ *!
+ * @brief C_CreateObject Creating an RSA Public key happy path.
+ *
+ */
+void test_pkcs11_C_CreateObjectRSAPubKey( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_KEY_TYPE xPrivateKeyType = CKK_RSA;
+    CK_OBJECT_CLASS xPrivateKeyClass = CKO_PRIVATE_KEY;
+    CK_BBOOL xTrue = CK_TRUE;
+    char * pucLabel = pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS;
+    CK_OBJECT_HANDLE xObject = 0;
+
+    RsaParams_t * pxRsaParams = NULL;
+
+    pxRsaParams = pvPkcs11MallocCb( sizeof( RsaParams_t ), 1 );
     TEST_ASSERT_NOT_EQUAL( NULL, pxRsaParams );
 
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );

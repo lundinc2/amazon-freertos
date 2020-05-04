@@ -73,6 +73,17 @@
         { CKA_VALUE, pxD, EC_D_LENGTH }                                            \
     }
 
+#define EC_PUB_KEY_INITIALIZER                                                    \
+    {                                                                              \
+        { CKA_CLASS, &xPrivateKeyClass, sizeof( CK_OBJECT_CLASS ) },               \
+        { CKA_KEY_TYPE, &xPrivateKeyType, sizeof( CK_KEY_TYPE ) },                 \
+        { CKA_LABEL, pucLabel, ( CK_ULONG ) strlen( ( const char * ) pucLabel ) }, \
+        { CKA_TOKEN, &xTrue, sizeof( CK_BBOOL ) },                                 \
+        { CKA_SIGN, &xTrue, sizeof( CK_BBOOL ) },                                  \
+        { CKA_EC_PARAMS, pxEcParams, EC_PARAMS_LENGTH },                           \
+        { CKA_VALUE, pxD, EC_D_LENGTH }                                            \
+    }
+
 
 /* Length parameters for importing RSA-2048 private keys. */
 #define MODULUS_LENGTH        pkcs11RSA_2048_MODULUS_BITS / 8
@@ -821,15 +832,15 @@ void test_pkcs11_C_CreateObjectECPubKey( void )
     mbedtls_ecp_point_read_binary_IgnoreAndReturn( 1 );
     mbedtls_mpi_read_binary_IgnoreAndReturn( 0 );
     pvPortMalloc_Stub( pvPkcs11MallocCb );
-    mbedtls_pk_write_key_der_IgnoreAndReturn( 1 );
+    mbedtls_pk_write_pubkey_der_IgnoreAndReturn( 1 );
     mbedtls_pk_free_CMockIgnore();
     PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
     xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
     xQueueGenericSend_IgnoreAndReturn( pdTRUE );
     vPortFree_Stub( vPkcs11FreeCb );
     xResult = C_CreateObject( xSession,
-                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
-                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              ( CK_ATTRIBUTE_PTR ) &xPublicKeyTemplate,
+                              sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                               &xObject );
 
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
@@ -919,15 +930,15 @@ void test_pkcs11_C_CreateObjectRSAPubKey( void )
     xResult = prvOpenSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    CK_ATTRIBUTE xPrivateKeyTemplate[] = {
+    CK_ATTRIBUTE xPublicKeyTemplate[] = {
         { CKA_CLASS, &xPublicKeyClass, sizeof( CK_OBJECT_CLASS ) },
         { CKA_KEY_TYPE, &xPublicKeyType, sizeof( CK_KEY_TYPE ) },
     };
 
     mbedtls_pk_init_CMockIgnore();
     xResult = C_CreateObject( xSession,
-                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
-                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              ( CK_ATTRIBUTE_PTR ) &xPublicKeyTemplate,
+                              sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                               &xObject );
 
     TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_TYPE_INVALID, xResult );

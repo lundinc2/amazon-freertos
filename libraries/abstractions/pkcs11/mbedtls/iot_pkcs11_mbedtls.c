@@ -1524,6 +1524,7 @@ CK_RV prvGetExistingKeyComponent( CK_OBJECT_HANDLE_PTR pxPalHandle,
     else if( 0 == memcmp( pxLabel->pValue, pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS, pxLabel->ulValueLen ) )
     {
         *pxPalHandle = PKCS11_PAL_FindObject( ( uint8_t * ) pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS, ( uint8_t ) pxLabel->ulValueLen );
+        xIsPrivate = CK_FALSE;
     }
 
     if( *pxPalHandle != CK_INVALID_HANDLE )
@@ -2137,7 +2138,6 @@ CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
     CK_RV xResult = CKR_OK;
     CK_ATTRIBUTE_PTR pxLabel = NULL;
     CK_OBJECT_HANDLE xPalHandle = CK_INVALID_HANDLE;
-    CK_BBOOL xPrivateKeyFound = CK_FALSE;
 
     mbedtls_pk_init( &xMbedContext );
 
@@ -2190,10 +2190,6 @@ CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
                     xResult = CKR_HOST_MEMORY;
                 }
             }
-            else
-            {
-                xPrivateKeyFound = CK_TRUE;
-            }
 
             xResult = prvCreateECPublicKey( &xMbedContext, &pxLabel, pxTemplate, ulCount );
         }
@@ -2217,15 +2213,15 @@ CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
 
     if( xResult == CKR_OK )
     {
-        if( xPrivateKeyFound == CK_FALSE )
-        {
-            lDerKeyLength = mbedtls_pk_write_pubkey_der( &xMbedContext, pxDerKey, MAX_PUBLIC_KEY_SIZE );
-        }
-        else
-        {
-            lDerKeyLength = mbedtls_pk_write_key_der( &xMbedContext, pxDerKey, MAX_PUBLIC_KEY_SIZE );
-        }
+        lDerKeyLength = mbedtls_pk_write_pubkey_der( &xMbedContext, pxDerKey, MAX_PUBLIC_KEY_SIZE );
 
+        if( lDerKeyLength < 0 ) 
+        {
+            PKCS11_PRINT( ( "mbedTLS sign failed with error %s : %s \r\n",
+                            mbedtlsHighLevelCodeOrDefault( lDerKeyLength ),
+                            mbedtlsLowLevelCodeOrDefault( lDerKeyLength ) ) );
+            xResult = CKR_FUNCTION_FAILED;
+        }
         /* Clean up the mbedTLS key context. */
         mbedtls_pk_free( &xMbedContext );
     }

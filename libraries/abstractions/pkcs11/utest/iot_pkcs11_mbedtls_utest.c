@@ -627,7 +627,7 @@ void test_pkcs11_C_OpenSession( void )
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    prvOpenSession( &xSession );
+    xResult = prvOpenSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = prvUninitializePkcs11();
@@ -687,10 +687,10 @@ void test_pkcs11_C_CloseSession( void )
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    prvOpenSession( &xSession );
+    xResult = prvOpenSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    prvCloseSession( &xSession );
+    xResult = prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = prvUninitializePkcs11();
@@ -713,7 +713,6 @@ void test_pkcs11_C_Login( void )
 }
 
 /* ======================  TESTING C_CreateObject  ============================ */
-
 /*!
  * @brief C_CreateObject Creating an EC private key happy path.
  *
@@ -740,7 +739,7 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    prvOpenSession( &xSession );
+    xResult = prvOpenSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     mbedtls_pk_init_CMockIgnore();
@@ -770,7 +769,7 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
 
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    prvCloseSession( &xSession );
+    xResult = prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = prvUninitializePkcs11();
@@ -779,6 +778,70 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
     vPkcs11FreeCb( ( void * ) xSession, 1 );
 }
 
+/*!
+ * @brief C_CreateObject Creating an EC public key happy path.
+ *
+ */
+void test_pkcs11_C_CreateObjectECPubKey( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_KEY_TYPE xPrivateKeyType = CKK_EC;
+    CK_OBJECT_CLASS xPrivateKeyClass = CKO_PUBLIC_KEY;
+    CK_BBOOL xTrue = CK_TRUE;
+    char * pucLabel = pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS;
+    /* DER-encoding of an ANSI X9.62 Parameters value */
+    CK_BYTE * pxEcParams = ( CK_BYTE * ) ( "\x06\x08" MBEDTLS_OID_EC_GRP_SECP256R1 );
+    CK_OBJECT_HANDLE xObject = 0;
+
+    /* Private value D. */
+    CK_BYTE * pxD = pvPkcs11MallocCb( EC_D_LENGTH, 1 );
+    TEST_ASSERT_NOT_EQUAL( NULL, pxD );
+
+    /* Reuse the private key initializer but the paramters used indicate 
+     * public key work */
+    CK_ATTRIBUTE xPublicKeyTemplate[] = EC_PRIV_KEY_INITIALIZER;
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    mbedtls_pk_init_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    PKCS11_PAL_FindObject_IgnoreAndReturn( 1 );
+    PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
+    mbedtls_pk_parse_public_key_IgnoreAndReturn( 0 );
+    PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    mbedtls_ecp_keypair_init_CMockIgnore();
+    mbedtls_ecp_group_init_CMockIgnore();
+    mbedtls_ecp_group_load_IgnoreAndReturn( 0 );
+    mbedtls_ecp_point_read_binary_IgnoreAndReturn( 1 );
+    mbedtls_mpi_read_binary_IgnoreAndReturn( 0 );
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    mbedtls_pk_write_key_der_IgnoreAndReturn( 1 );
+    mbedtls_pk_free_CMockIgnore();
+    PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
+    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
+    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    vPortFree_Stub( vPkcs11FreeCb );
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvCloseSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    vPkcs11FreeCb( ( void * ) xSession, 1 );
+}
 
 /*
  *!
@@ -803,7 +866,7 @@ void test_pkcs11_C_CreateObjectRSAPrivKey( void )
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    prvOpenSession( &xSession );
+    xResult = prvOpenSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     CK_ATTRIBUTE xPrivateKeyTemplate[] = RSA_PRIV_KEY_INITIALIZER;
@@ -827,7 +890,7 @@ void test_pkcs11_C_CreateObjectRSAPrivKey( void )
 
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    prvCloseSession( &xSession );
+    xResult = prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = prvUninitializePkcs11();
@@ -846,50 +909,32 @@ void test_pkcs11_C_CreateObjectRSAPubKey( void )
 {
     CK_RV xResult = CKR_OK;
     CK_SESSION_HANDLE xSession = 0;
-    CK_KEY_TYPE xPrivateKeyType = CKK_RSA;
-    CK_OBJECT_CLASS xPrivateKeyClass = CKO_PRIVATE_KEY;
-    CK_BBOOL xTrue = CK_TRUE;
-    char * pucLabel = pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS;
+    CK_KEY_TYPE xPublicKeyType = CKK_RSA;
+    CK_OBJECT_CLASS xPublicKeyClass = CKO_PUBLIC_KEY;
     CK_OBJECT_HANDLE xObject = 0;
-
-    RsaParams_t * pxRsaParams = NULL;
-
-    pxRsaParams = pvPkcs11MallocCb( sizeof( RsaParams_t ), 1 );
-    TEST_ASSERT_NOT_EQUAL( NULL, pxRsaParams );
 
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    prvOpenSession( &xSession );
+    xResult = prvOpenSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    CK_ATTRIBUTE xPrivateKeyTemplate[] = RSA_PRIV_KEY_INITIALIZER;
+    CK_ATTRIBUTE xPrivateKeyTemplate[] = {
+        { CKA_CLASS, &xPublicKeyClass, sizeof( CK_OBJECT_CLASS ) },
+        { CKA_KEY_TYPE, &xPublicKeyType, sizeof( CK_KEY_TYPE ) },
+    };
 
     mbedtls_pk_init_CMockIgnore();
-    pvPortMalloc_Stub( pvPkcs11MallocCb );
-    mbedtls_rsa_init_CMockIgnore();
-    mbedtls_rsa_import_raw_IgnoreAndReturn( 0 );
-    mbedtls_mpi_read_binary_IgnoreAndReturn( 0 );
-    pvPortMalloc_Stub( pvPkcs11MallocCb );
-    mbedtls_pk_write_key_der_IgnoreAndReturn( 1 );
-    mbedtls_pk_free_CMockIgnore();
-    PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
-    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
-    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
-    vPortFree_Stub( vPkcs11FreeCb );
     xResult = C_CreateObject( xSession,
                               ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
                               sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                               &xObject );
 
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_TYPE_INVALID, xResult );
 
-    prvCloseSession( &xSession );
+    xResult = prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
-
-    vPkcs11FreeCb( ( void * ) xSession, 1 );
-    vPkcs11FreeCb( ( void * ) pxRsaParams, 1 );
 }

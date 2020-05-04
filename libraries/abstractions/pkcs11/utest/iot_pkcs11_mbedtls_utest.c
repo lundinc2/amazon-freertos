@@ -674,7 +674,6 @@ void test_pkcs11_C_CloseSession( void )
 {
     CK_RV xResult = CKR_OK;
     CK_SESSION_HANDLE xSession = 0;
-    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
 
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
@@ -733,7 +732,7 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
 
     mbedtls_pk_init_CMockIgnore();
     pvPortMalloc_Stub( pvPkcs11MallocCb );
-    PKCS11_PAL_FindObject_IgnoreAndReturn( &xResult );
+    PKCS11_PAL_FindObject_IgnoreAndReturn( 1 );
     PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
     mbedtls_pk_parse_key_IgnoreAndReturn( 0 );
     PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
@@ -777,7 +776,6 @@ void test_pkcs11_C_CreateObjectRSAPrivKey( void )
 {
     CK_RV xResult = CKR_OK;
     CK_SESSION_HANDLE xSession = 0;
-    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
     CK_KEY_TYPE xPrivateKeyType = CKK_RSA;
     CK_OBJECT_CLASS xPrivateKeyClass = CKO_PRIVATE_KEY;
     CK_BBOOL xTrue = CK_TRUE;
@@ -785,7 +783,7 @@ void test_pkcs11_C_CreateObjectRSAPrivKey( void )
     CK_OBJECT_HANDLE xObject = 0;
 
     RsaParams_t * pxRsaParams = NULL;
-    pxRsaParams = pvPortMalloc( sizeof( RsaParams_t ) );
+    pxRsaParams = pvPkcs11MallocCb ( sizeof( RsaParams_t ), 1 );
     TEST_ASSERT_NOT_EQUAL( NULL, pxRsaParams );
 
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
@@ -798,17 +796,12 @@ void test_pkcs11_C_CreateObjectRSAPrivKey( void )
 
     mbedtls_pk_init_CMockIgnore();
     pvPortMalloc_Stub( pvPkcs11MallocCb );
-    PKCS11_PAL_FindObject_IgnoreAndReturn( &xResult );
-    PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
-    mbedtls_pk_parse_key_IgnoreAndReturn( 0 );
-    PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
-    pvPortMalloc_Stub( pvPkcs11MallocCb );
     mbedtls_rsa_init_CMockIgnore();
-    mbedtls_rsa_import_raw_IgnoreAndReturn( 1 );
-    mbedtls_mpi_read_binary_IgnoreAndReturn( 8 );
+    mbedtls_rsa_import_raw_IgnoreAndReturn( 0 );
+    mbedtls_mpi_read_binary_IgnoreAndReturn( 0 );
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
     mbedtls_pk_write_key_der_IgnoreAndReturn( 1 );
     mbedtls_pk_free_CMockIgnore();
-    pvPortMalloc_Stub( pvPkcs11MallocCb );
     PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
     xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
     xQueueGenericSend_IgnoreAndReturn( pdTRUE );
@@ -827,30 +820,5 @@ void test_pkcs11_C_CreateObjectRSAPrivKey( void )
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     vPkcs11FreeCb( ( void * ) xSession, 1 );
-}
-/* ======================  TESTING C_DestroyObject  ============================ */
-/*
- *!
- * @brief C_DestroyObject happy path.
- *
- */
-void test_pkcs11_C_DestroyObject( void )
-{
-    CK_RV xResult = CKR_OK;
-    CK_SESSION_HANDLE xSession = 0;
-    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
-
-    prvOpenSession( &xSession );
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
-
-    PKCS11_PAL_DestroyObject_IgnoreAndReturn( CKR_OK );
-    xResult = C_DestroyObject( xSession, 0 );
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
-
-    prvCloseSession( &xSession );
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
-
-    xResult = prvUninitializePkcs11();
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    vPkcs11FreeCb( ( void * ) pxRsaParams, 1 );
 }

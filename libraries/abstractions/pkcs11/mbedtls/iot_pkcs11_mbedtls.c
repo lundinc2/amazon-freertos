@@ -1961,6 +1961,7 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
         mbedtls_pk_free( &xMbedContext );
     }
 
+    #if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 )
     if( xResult == CKR_OK )
     {
         /* TODO: Remove this hack.
@@ -1988,6 +1989,7 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
             }
         }
     }
+    #endif
 
     /* Save the object to device NVM. */
     if( xResult == CKR_OK )

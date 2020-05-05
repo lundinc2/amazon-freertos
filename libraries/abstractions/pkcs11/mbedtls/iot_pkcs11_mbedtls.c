@@ -1286,6 +1286,12 @@ CK_DECLARE_FUNCTION( CK_RV, C_CloseSession )( CK_SESSION_HANDLE xSession )
             vSemaphoreDelete( pxSession->xVerifyMutex );
         }
 
+        if( NULL != pxSession->pxFindObjectLabel )
+        {
+            vPortFree( pxSession->pxFindObjectLabel );
+            pxSession->pxFindObjectLabel = NULL;
+        }
+
         mbedtls_sha256_free( &pxSession->xSHA256Context );
 
         vPortFree( pxSession );
@@ -2012,6 +2018,11 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
     if( pxDerKey != NULL )
     {
         vPortFree( pxDerKey );
+    }
+
+    if( pxRsaCtx != NULL )
+    {
+        vPortFree( pxRsaCtx );
     }
 
     return xResult;
@@ -2812,10 +2823,10 @@ CK_DECLARE_FUNCTION( CK_RV, C_FindObjects )( CK_SESSION_HANDLE xSession,
                                              CK_OBJECT_HANDLE_PTR pxObject,
                                              CK_ULONG ulMaxObjectCount,
                                              CK_ULONG_PTR pulObjectCount )
-{ /*lint !e9072 It's OK to have different parameter name. */
+{ 
+    /*lint !e9072 It's OK to have different parameter name. */
     CK_RV xResult = PKCS11_SESSION_VALID_AND_MODULE_INITIALIZED( xSession );
 
-    BaseType_t xDone = pdFALSE;
     P11SessionPtr_t pxSession = prvSessionPointerFromHandle( xSession );
 
     CK_BYTE_PTR pcObjectValue = NULL;
@@ -2832,7 +2843,6 @@ CK_DECLARE_FUNCTION( CK_RV, C_FindObjects )( CK_SESSION_HANDLE xSession,
         ( NULL == pulObjectCount ) )
     {
         xResult = CKR_ARGUMENTS_BAD;
-        xDone = pdTRUE;
     }
 
     if( xResult == CKR_OK )
@@ -2840,23 +2850,16 @@ CK_DECLARE_FUNCTION( CK_RV, C_FindObjects )( CK_SESSION_HANDLE xSession,
         if( pxSession->pxFindObjectLabel == NULL )
         {
             xResult = CKR_OPERATION_NOT_INITIALIZED;
-            xDone = pdTRUE;
-        }
-
-        if( 0u == ulMaxObjectCount )
-        {
-            xResult = CKR_ARGUMENTS_BAD;
-            xDone = pdTRUE;
         }
 
         if( 1u != ulMaxObjectCount )
         {
-            PKCS11_WARNING_PRINT( ( "WARN: Searching for more than 1 object not supported. \r\n" ) );
+            xResult = CKR_ARGUMENTS_BAD;
+            PKCS11_WARNING_PRINT( ( "WARN: Searching for anything other than 1 object not supported. \r\n" ) );
         }
     }
 
-    /* TODO: Re-inspect this previous logic. */
-    if( ( xResult == CKR_OK ) && ( pdFALSE == xDone ) )
+    if( xResult == CKR_OK )
     {
         /* Try to find the object in module's list first. */
         prvFindObjectInListByLabel( pxSession->pxFindObjectLabel, strlen( ( const char * ) pxSession->pxFindObjectLabel ), &xPalHandle, pxObject );
@@ -2897,16 +2900,6 @@ CK_DECLARE_FUNCTION( CK_RV, C_FindObjects )( CK_SESSION_HANDLE xSession,
             /* According to the PKCS #11 standard, not finding an object results in a CKR_OK return value with an object count of 0. */
             *pulObjectCount = 0;
             PKCS11_WARNING_PRINT( ( "WARN: Object with label '%s' not found. \r\n", ( char * ) pxSession->pxFindObjectLabel ) );
-        }
-    }
-
-    /* Clean up memory if there was an error finding the object. */
-    if( xResult != CKR_OK )
-    {
-        if( ( pxSession != NULL ) && ( pxSession->pxFindObjectLabel != NULL ) )
-        {
-            vPortFree( pxSession->pxFindObjectLabel );
-            pxSession->pxFindObjectLabel = NULL;
         }
     }
 
@@ -3207,7 +3200,6 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE xSession,
 {
     CK_RV xResult = PKCS11_SESSION_VALID_AND_MODULE_INITIALIZED( xSession );
     CK_BBOOL xIsPrivate = CK_TRUE;
-    CK_BBOOL xCleanupNeeded = CK_FALSE;
     CK_OBJECT_HANDLE xPalHandle;
     uint8_t * pxLabel = NULL;
     size_t xLabelLength = 0;
@@ -3217,19 +3209,16 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE xSession,
     P11SessionPtr_t pxSession = prvSessionPointerFromHandle( xSession );
     uint8_t * keyData = NULL;
     uint32_t ulKeyDataLength = 0;
+    int32_t lMbedTLSResult = 0;
 
     if( NULL == pxMechanism )
     {
         PKCS11_PRINT( ( "ERROR: Null signing mechanism provided. \r\n" ) );
         xResult = CKR_ARGUMENTS_BAD;
     }
-
-    if( xResult == CKR_OK )
+    else if( operationActive( pxSession ) )
     {
-        if( operationActive( pxSession ) )
-        {
-            xResult = CKR_OPERATION_ACTIVE;
-        }
+        xResult = CKR_OPERATION_ACTIVE;
     }
 
     /* Retrieve key value from storage. */
@@ -3244,18 +3233,14 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE xSession,
         {
             xResult = PKCS11_PAL_GetObjectValue( xPalHandle, &keyData, &ulKeyDataLength, &xIsPrivate );
 
-            if( xResult == CKR_OK )
-            {
-                xCleanupNeeded = CK_TRUE;
-            }
-            else
+            if( xResult != CKR_OK )
             {
                 PKCS11_PRINT( ( "ERROR: Unable to retrieve value of private key for signing %d. \r\n", xResult ) );
             }
-        }
-        else
-        {
-            xResult = CKR_KEY_HANDLE_INVALID;
+            else
+            {
+                xResult = CKR_KEY_HANDLE_INVALID;
+            }
         }
     }
 
@@ -3284,26 +3269,25 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE xSession,
             }
 
             mbedtls_pk_init( &pxSession->xSignKey );
-
-            if( 0 != mbedtls_pk_parse_key( &pxSession->xSignKey, keyData, ulKeyDataLength, NULL, 0 ) )
+            lMbedTLSResult = mbedtls_pk_parse_key( &pxSession->xSignKey, keyData, ulKeyDataLength, NULL, 0 );
+            if( lMbedTLSResult != 0 )
             {
-                PKCS11_PRINT( ( "ERROR: Unable to parse private key for signing. \r\n" ) );
+                PKCS11_PRINT( ( "mbedTLS unable to parse private key for signing. %s : %s \r\n",
+                            mbedtlsHighLevelCodeOrDefault( lMbedTLSResult ),
+                            mbedtlsLowLevelCodeOrDefault( lMbedTLSResult ) ) );
                 xResult = CKR_KEY_HANDLE_INVALID;
             }
 
             xSemaphoreGive( pxSession->xSignMutex );
+
+            /* Key has been parsed into mbedTLS pk structure.
+             * Free the memory allocated to copy the key out of flash. */
+            PKCS11_PAL_GetObjectValueCleanup( keyData, ulKeyDataLength );
         }
         else
         {
             xResult = CKR_CANT_LOCK;
         }
-    }
-
-    /* Key has been parsed into mbedTLS pk structure.
-     * Free the memory allocated to copy the key out of flash. */
-    if( xCleanupNeeded == CK_TRUE )
-    {
-        PKCS11_PAL_GetObjectValueCleanup( keyData, ulKeyDataLength );
     }
 
     /* Check that the mechanism and key type are compatible, supported. */
@@ -3394,11 +3378,9 @@ CK_DECLARE_FUNCTION( CK_RV, C_Sign )( CK_SESSION_HANDLE xSession,
     {
         xResult = CKR_ARGUMENTS_BAD;
     }
-
-    if( CKR_OK == xResult )
+    else
     {
         /* Update the signature length. */
-
         if( pxSessionObj->xOperationSignMechanism == CKM_RSA_PKCS )
         {
             xSignatureLength = pkcs11RSA_2048_SIGNATURE_LENGTH;

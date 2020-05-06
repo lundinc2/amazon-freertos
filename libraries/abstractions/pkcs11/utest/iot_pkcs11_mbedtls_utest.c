@@ -1439,9 +1439,6 @@ void test_pkcs11_C_SignECDSA( void )
     xResult = prvOpenSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-/*    xResult = prvCreateEcPub( &xSession, &xObject) */
-/*    TEST_ASSERT_EQUAL( CKR_OK, xResult ); */
-
     PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
     xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
     mbedtls_pk_free_CMockIgnore();
@@ -1490,6 +1487,7 @@ void test_pkcs11_C_VerifyInitECDSA( void )
 
     xResult = prvCreateEcPub( &xSession, &xObject );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
     PKCS11_PAL_GetObjectValue_ExpectAnyArgsAndReturn( CKR_OK );
     PKCS11_PAL_GetObjectValue_ReturnThruPtr_pIsPrivate( &xIsPrivate );
     xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );

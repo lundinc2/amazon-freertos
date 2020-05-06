@@ -3391,7 +3391,8 @@ CK_DECLARE_FUNCTION( CK_RV, C_Sign )( CK_SESSION_HANDLE xSession,
     {
         xResult = CKR_ARGUMENTS_BAD;
     }
-	if( CKR_OK == xResult )
+
+    if( CKR_OK == xResult )
     {
         /* Update the signature length. */
         if( pxSessionObj->xOperationSignMechanism == CKM_RSA_PKCS )

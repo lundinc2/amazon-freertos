@@ -260,7 +260,7 @@ static CK_RV prvCloseSession( CK_SESSION_HANDLE_PTR pxSession )
 }
 
 /*!
- * @brief Helper function to create a certificate.
+ * @brief Helper function to create a x509 certificate.
  *
  */
 static CK_RV prvCreateCert( CK_SESSION_HANDLE_PTR pxSession, 
@@ -280,6 +280,53 @@ static CK_RV prvCreateCert( CK_SESSION_HANDLE_PTR pxSession,
     PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
     xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
     xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    xResult = C_CreateObject( *pxSession,
+                              ( CK_ATTRIBUTE_PTR ) &xTemplate,
+                              sizeof( xTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              pxObject );
+    return xResult;
+}
+
+/*!
+ * @brief Helper function to create a EC Public Key.
+ *
+ */
+static CK_RV prvCreateEcPub( CK_SESSION_HANDLE_PTR pxSession, 
+        CK_OBJECT_HANDLE_PTR pxObject)
+{
+    CK_RV xResult = CKR_OK;
+
+    CK_KEY_TYPE xPublicKeyType = CKK_EC;
+    CK_OBJECT_CLASS xPublicKeyClass = CKO_PUBLIC_KEY;
+    CK_BBOOL xTrue = CK_TRUE;
+    char * pucLabel = pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS;
+    size_t xLength = 256;
+    /* DER-encoding of an ANSI X9.62 Parameters value */
+    CK_BYTE pxEcParams[] = pkcs11DER_ENCODED_OID_P256;
+    CK_BYTE pxEcPoint[ 256 ] = { 0 };
+
+    CK_ATTRIBUTE xTemplate[] = EC_PUB_KEY_INITIALIZER;
+
+    /* Create  EC based public key. */
+    mbedtls_pk_init_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    PKCS11_PAL_FindObject_IgnoreAndReturn( 1 );
+    PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
+    mbedtls_pk_parse_public_key_IgnoreAndReturn( 0 );
+    PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    mbedtls_ecp_keypair_init_CMockIgnore();
+    mbedtls_ecp_group_init_CMockIgnore();
+    mbedtls_ecp_group_load_IgnoreAndReturn( 0 );
+    mbedtls_ecp_point_read_binary_IgnoreAndReturn( 0 );
+    mbedtls_mpi_read_binary_IgnoreAndReturn( 0 );
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    mbedtls_pk_write_pubkey_der_IgnoreAndReturn( 1 );
+    mbedtls_pk_free_CMockIgnore();
+    PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
+    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
+    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    vPortFree_Stub( vPkcs11FreeCb );
     xResult = C_CreateObject( *pxSession,
                               ( CK_ATTRIBUTE_PTR ) &xTemplate,
                               sizeof( xTemplate ) / sizeof( CK_ATTRIBUTE ),
@@ -1318,11 +1365,15 @@ void test_pkcs11_C_SignInitECDSA( void )
     CK_MECHANISM xMechanism = { 0 };
     xMechanism.mechanism = CKM_ECDSA;
     CK_OBJECT_HANDLE xKey = 0;
+    CK_OBJECT_HANDLE xObject = 0;
 
     xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvCreateEcPub( &xSession, &xObject);
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
@@ -1365,6 +1416,9 @@ void test_pkcs11_C_SignECDSA( void )
     xResult = prvOpenSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
+//    xResult = prvCreateEcPub( &xSession, &xObject)
+//    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
     PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
     xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
     mbedtls_pk_free_CMockIgnore();
@@ -1383,6 +1437,46 @@ void test_pkcs11_C_SignECDSA( void )
     xResult = C_Sign( xSession, pxDummyData, ulDummyDataLen, pxDummySignature, &ulDummySignatureLen );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
     
+    xResult = prvCloseSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+/* ======================  TESTING C_VerifyInit  ============================ */
+/*!
+ * @brief C_VerifyInit ECDSA happy path.
+ *
+ */
+void test_pkcs11_C_VerifyInitECDSA( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_OBJECT_HANDLE xObject = 0;
+    CK_MECHANISM xMechanism = { 0 };
+    xMechanism.mechanism = CKM_ECDSA;
+    CK_BBOOL xIsPrivate = CK_FALSE;
+
+    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvCreateEcPub( &xSession, &xObject);
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    PKCS11_PAL_GetObjectValue_ExpectAnyArgsAndReturn( CKR_OK );
+    PKCS11_PAL_GetObjectValue_ReturnThruPtr_pIsPrivate( &xIsPrivate );
+    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
+    mbedtls_pk_free_CMockIgnore();
+    mbedtls_pk_init_CMockIgnore();
+    mbedtls_pk_parse_public_key_IgnoreAndReturn( 0 );
+    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
+    mbedtls_pk_get_type_IgnoreAndReturn( MBEDTLS_PK_ECDSA );
+    xResult = C_VerifyInit( xSession, &xMechanism, xObject );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+        
     xResult = prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 

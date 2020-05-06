@@ -1978,12 +1978,12 @@ TEST( Full_PKCS11_EC, AFQP_Verify )
     mbedtls_pk_context xPkContext;
     /* TODO: Consider switching this out for a C_GenerateRandom dependent function for ports not implementing mbedTLS. */
     mbedtls_entropy_context xEntropyContext;
-    mbedtls_ctr_drbg_context xDrbgContext;
-    int lMbedResult;
+mbedtls_ctr_drbg_context xDrbgContext;
+int lMbedResult;
 
-    prvProvisionCredentialsWithKeyImport( &xPrivateKey, &xCertificate, &xPublicKey );
+prvProvisionCredentialsWithKeyImport( &xPrivateKey, &xCertificate, &xPublicKey );
 
-    /* Sign data w/ PKCS. */
+/* Sign data w/ PKCS. */
     xMechanism.mechanism = CKM_ECDSA;
     xMechanism.pParameter = NULL;
     xMechanism.ulParameterLen = 0;

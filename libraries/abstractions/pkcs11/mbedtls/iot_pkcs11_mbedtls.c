@@ -3216,7 +3216,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE xSession,
         PKCS11_PRINT( ( "ERROR: Null signing mechanism provided. \r\n" ) );
         xResult = CKR_ARGUMENTS_BAD;
     }
-    else if( operationActive( pxSession ) )
+    else if( ( pxSession != NULL ) && ( operationActive( pxSession ) ) )
     {
         xResult = CKR_OPERATION_ACTIVE;
     }
@@ -3236,10 +3236,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE xSession,
             if( xResult != CKR_OK )
             {
                 PKCS11_PRINT( ( "ERROR: Unable to retrieve value of private key for signing %d. \r\n", xResult ) );
-            }
-            else
-            {
-                xResult = CKR_KEY_HANDLE_INVALID;
+				xResult = CKR_KEY_HANDLE_INVALID;
             }
         }
     }
@@ -3378,7 +3375,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Sign )( CK_SESSION_HANDLE xSession,
     {
         xResult = CKR_ARGUMENTS_BAD;
     }
-    else
+    else if( pxSessionObj != NULL )
     {
         /* Update the signature length. */
         if( pxSessionObj->xOperationSignMechanism == CKM_RSA_PKCS )
@@ -3513,7 +3510,6 @@ CK_DECLARE_FUNCTION( CK_RV, C_VerifyInit )( CK_SESSION_HANDLE xSession,
     P11SessionPtr_t pxSession;
     uint8_t * keyData = NULL;
     uint32_t ulKeyDataLength = 0;
-    CK_BBOOL xCleanupNeeded = CK_FALSE;
     mbedtls_pk_type_t xKeyType;
     CK_OBJECT_HANDLE xPalHandle = CK_INVALID_HANDLE;
     uint8_t * pxLabel = NULL;
@@ -3525,14 +3521,10 @@ CK_DECLARE_FUNCTION( CK_RV, C_VerifyInit )( CK_SESSION_HANDLE xSession,
     {
         PKCS11_PRINT( ( "ERROR: Null verification mechanism provided. \r\n" ) );
         xResult = CKR_ARGUMENTS_BAD;
-    }
-
-    if( xResult == CKR_OK )
+    } 
+    else if( ( NULL != pxSession ) && ( operationActive( pxSession ) ) )
     {
-        if( operationActive( pxSession ) )
-        {
-            xResult = CKR_OPERATION_ACTIVE;
-        }
+        xResult = CKR_OPERATION_ACTIVE;
     }
 
     /* Retrieve key value from storage. */
@@ -3547,11 +3539,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_VerifyInit )( CK_SESSION_HANDLE xSession,
         {
             xResult = PKCS11_PAL_GetObjectValue( xPalHandle, &keyData, &ulKeyDataLength, &xIsPrivate );
 
-            if( xResult == CKR_OK )
-            {
-                xCleanupNeeded = CK_TRUE;
-            }
-            else
+            if( xResult != CKR_OK )
             {
                 PKCS11_PRINT( ( "ERROR: Unable to retrieve value of private key for signing %d. \r\n", xResult ) );
             }
@@ -3595,6 +3583,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_VerifyInit )( CK_SESSION_HANDLE xSession,
             }
 
             xSemaphoreGive( pxSession->xVerifyMutex );
+            PKCS11_PAL_GetObjectValueCleanup( keyData, ulKeyDataLength );
         }
         else
         {
@@ -3602,10 +3591,6 @@ CK_DECLARE_FUNCTION( CK_RV, C_VerifyInit )( CK_SESSION_HANDLE xSession,
         }
     }
 
-    if( xCleanupNeeded == CK_TRUE )
-    {
-        PKCS11_PAL_GetObjectValueCleanup( keyData, ulKeyDataLength );
-    }
 
     /* Check that the mechanism and key type are compatible, supported. */
     if( xResult == CKR_OK )

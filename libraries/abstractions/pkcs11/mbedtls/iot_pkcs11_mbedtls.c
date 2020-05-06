@@ -1190,7 +1190,6 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
         if( CKR_OK == xResult )
         {
             memset( pxSessionObj, 0, sizeof( P11Session_t ) );
-
             pxSessionObj->xSignMutex = xSemaphoreCreateMutex();
 
             if( NULL == pxSessionObj->xSignMutex )
@@ -1979,7 +1978,7 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
     #if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 )
         if( xResult == CKR_OK )
         {
-            /* TODO: Remove this hack.
+            /*
              * mbedtls_pk_write_key_der appends empty public
              * key data when saving EC private key
              * that does not have a public key associated with it.
@@ -2909,6 +2908,16 @@ CK_DECLARE_FUNCTION( CK_RV, C_FindObjects )( CK_SESSION_HANDLE xSession,
         }
     }
 
+    /* Clean up memory if there was an error finding the object. */
+    if( xResult != CKR_OK )
+    {
+        if( ( pxSession != NULL ) && ( pxSession->pxFindObjectLabel != NULL ) )
+        {
+            vPortFree( pxSession->pxFindObjectLabel );
+            pxSession->pxFindObjectLabel = NULL;
+        }
+    }
+
     return xResult;
 }
 /* @[declare_pkcs11_mbedtls_c_findobjects] */
@@ -3381,7 +3390,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Sign )( CK_SESSION_HANDLE xSession,
     {
         xResult = CKR_ARGUMENTS_BAD;
     }
-	if( xResult == CKR_OK )
+	if( CKR_OK == xResult )
     {
         /* Update the signature length. */
         if( pxSessionObj->xOperationSignMechanism == CKM_RSA_PKCS )

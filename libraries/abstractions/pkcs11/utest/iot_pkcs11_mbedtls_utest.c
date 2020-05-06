@@ -346,7 +346,12 @@ void test_pkcs11_C_Initialize( void )
 {
     CK_RV xResult = CKR_OK;
 
-    xResult = prvInitializePkcs11();
+    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) 1 );
+    CRYPTO_Init_Ignore();
+    mbedtls_entropy_init_Ignore();
+    mbedtls_ctr_drbg_init_Ignore();
+    mbedtls_ctr_drbg_seed_IgnoreAndReturn( 0 );
+    xResult = C_Initialize( NULL );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = prvUninitializePkcs11();
@@ -362,7 +367,11 @@ void test_pkcs11_C_InitializeMemFail( void )
     CK_RV xResult = CKR_OK;
 
     xQueueCreateMutex_IgnoreAndReturn( NULL );
-    xResult = prvInitializePkcs11();
+    CRYPTO_Init_Ignore();
+    mbedtls_entropy_init_Ignore();
+    mbedtls_ctr_drbg_init_Ignore();
+    mbedtls_ctr_drbg_seed_IgnoreAndReturn( 0 );
+    xResult = C_Initialize( NULL );   xResult = prvInitializePkcs11();
 
     TEST_ASSERT_EQUAL( CKR_HOST_MEMORY, xResult );
 }
@@ -375,11 +384,12 @@ void test_pkcs11_C_InitializeSeedFail( void )
 {
     CK_RV xResult = CKR_OK;
 
+    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) 1 );
+    CRYPTO_Init_Ignore();
+    mbedtls_entropy_init_Ignore();
+    mbedtls_ctr_drbg_init_Ignore();
     mbedtls_ctr_drbg_seed_IgnoreAndReturn( 1 );
-
-    /* Hack: Giving out pointer to xResult when creating a mutex. This unit testcase
-     * will never use the actual mutex. */
-    xResult = prvInitializePkcs11();
+    xResult = C_Initialize( NULL );
 
     TEST_ASSERT_EQUAL( CKR_FUNCTION_FAILED, xResult );
 }
@@ -413,7 +423,10 @@ void test_pkcs11_C_FinalizeUninitialized( void )
 {
     CK_RV xResult = CKR_OK;
 
-    xResult = prvUninitializePkcs11();
+    mbedtls_entropy_free_CMockIgnore();
+    mbedtls_ctr_drbg_free_CMockIgnore();
+    vQueueDelete_CMockIgnore();
+    xResult = C_Finalize( NULL );
     TEST_ASSERT_EQUAL( CKR_CRYPTOKI_NOT_INITIALIZED, xResult );
 }
 
@@ -524,7 +537,7 @@ void test_pkcs11_C_GetSlotListNullCount( void )
     CK_RV xResult = CKR_OK;
     CK_BBOOL xTokenPresent = CK_TRUE;
 
-    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    xResult = prvInitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = C_GetSlotList( xTokenPresent, NULL, NULL );
@@ -541,25 +554,21 @@ void test_pkcs11_C_GetSlotListNullCount( void )
 void test_pkcs11_C_GetSlotListBadObjCount( void )
 {
     CK_RV xResult = CKR_OK;
-    CK_SLOT_ID_PTR pxSlotId = NULL;
+    CK_SLOT_ID xSlotId = 1;
     CK_ULONG xSlotCount = 0;
     CK_BBOOL xTokenPresent = CK_TRUE;
 
-    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    xResult = prvInitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    pxSlotId = pvPkcs11MallocCb( sizeof( CK_SLOT_ID ) * 1, 1 );
-    memset( pxSlotId, 0, sizeof( CK_SLOT_ID ) * 1 );
-    xResult = C_GetSlotList( xTokenPresent, pxSlotId, &xSlotCount );
+    xResult = C_GetSlotList( xTokenPresent, &xSlotId, &xSlotCount );
 
     TEST_ASSERT_EQUAL( CKR_BUFFER_TOO_SMALL, xResult );
     TEST_ASSERT_EQUAL( 0, xSlotCount );
-    TEST_ASSERT_EQUAL( 0, pxSlotId[ 0 ] );
-
-    vPkcs11FreeCb( pxSlotId, 1 );
+    TEST_ASSERT_EQUAL( 1, xSlotId );
 
     xResult = prvUninitializePkcs11();
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult )
 }
 
 /*!
@@ -707,8 +716,15 @@ void test_pkcs11_C_OpenSession( void )
 {
     CK_RV xResult = CKR_OK;
     CK_SESSION_HANDLE xSession = 0;
+    CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
 
     xResult = prvInitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
+    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
+    xResult = C_OpenSession( 0, xFlags, NULL, 0, &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = prvOpenSession( &xSession );
@@ -797,6 +813,7 @@ void test_pkcs11_C_Login( void )
 }
 
 /* ======================  TESTING C_CreateObject  ============================ */
+
 /*!
  * @brief C_CreateObject Creating an EC private key happy path.
  *
@@ -818,7 +835,7 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
 
     CK_ATTRIBUTE xPrivateKeyTemplate[] = EC_PRIV_KEY_INITIALIZER;
 
-    xResult = prvInitializePkcs11( ( SemaphoreHandle_t ) &xResult );
+    xResult = prvInitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     xResult = prvOpenSession( &xSession );
@@ -834,8 +851,6 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
     mbedtls_ecp_keypair_init_CMockIgnore();
     mbedtls_ecp_group_init_CMockIgnore();
     mbedtls_ecp_group_load_IgnoreAndReturn( 0 );
-
-    /* current callstack */
     mbedtls_mpi_read_binary_IgnoreAndReturn( 0 );
     pvPortMalloc_Stub( pvPkcs11MallocCb );
     mbedtls_pk_write_key_der_IgnoreAndReturn( 1 );

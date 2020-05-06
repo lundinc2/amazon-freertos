@@ -503,6 +503,7 @@ CK_RV prvMbedTLS_Initialize( void )
             xResult = CKR_HOST_MEMORY;
         }
     }
+
     if( xResult == CKR_OK )
     {
         CRYPTO_Init();

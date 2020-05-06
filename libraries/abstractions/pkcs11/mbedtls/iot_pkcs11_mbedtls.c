@@ -800,6 +800,11 @@ CK_RV prvAddObjectToList( CK_OBJECT_HANDLE xPalHandle,
                 }
             }
 
+            if( xResult != CKR_OK )
+            {
+                PKCS11_PRINT( ( "Error cleaning up PAL Handle 2. \r\n, %d", xResult ) );
+            }
+
             xResult = prvDeleteObjectFromList( xAppHandle );
         }
 
@@ -1179,20 +1184,20 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
         if( CKR_OK == xResult )
         {
             memset( pxSessionObj, 0, sizeof( P11Session_t ) );
-        }
 
-        pxSessionObj->xSignMutex = xSemaphoreCreateMutex();
+            pxSessionObj->xSignMutex = xSemaphoreCreateMutex();
 
-        if( NULL == pxSessionObj->xSignMutex )
-        {
-            xResult = CKR_HOST_MEMORY;
-        }
+            if( NULL == pxSessionObj->xSignMutex )
+            {
+                xResult = CKR_HOST_MEMORY;
+            }
 
-        pxSessionObj->xVerifyMutex = xSemaphoreCreateMutex();
+            pxSessionObj->xVerifyMutex = xSemaphoreCreateMutex();
 
-        if( NULL == pxSessionObj->xVerifyMutex )
-        {
-            xResult = CKR_HOST_MEMORY;
+            if( NULL == pxSessionObj->xVerifyMutex )
+            {
+                xResult = CKR_HOST_MEMORY;
+            }
         }
     }
 
@@ -1923,7 +1928,6 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
                 }
             }
 
-            /* Stopped here */
             if( xResult == CKR_OK )
             {
                 xResult = prvCreateEcPrivateKey( &xMbedContext,
@@ -2202,7 +2206,10 @@ CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
                 }
             }
 
-            xResult = prvCreateECPublicKey( &xMbedContext, &pxLabel, pxTemplate, ulCount );
+            if( xResult == CKR_OK )
+            {
+                xResult = prvCreateECPublicKey( &xMbedContext, &pxLabel, pxTemplate, ulCount );
+            }
         }
     #endif /* if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 ) */
     else
@@ -2569,38 +2576,31 @@ CK_DECLARE_FUNCTION( CK_RV, C_GetAttributeValue )( CK_SESSION_HANDLE xSession,
                     }
                     else
                     {
-                        if( 0 != xResult )
+                        xKeyType = mbedtls_pk_get_type( &xKeyContext );
+
+                        switch( xKeyType )
                         {
-                            xResult = CKR_FUNCTION_FAILED;
+                            case MBEDTLS_PK_RSA:
+                            case MBEDTLS_PK_RSA_ALT:
+                            case MBEDTLS_PK_RSASSA_PSS:
+                                xPkcsKeyType = CKK_RSA;
+                                break;
+
+                            case MBEDTLS_PK_ECKEY:
+                            case MBEDTLS_PK_ECKEY_DH:
+                                xPkcsKeyType = CKK_EC;
+                                break;
+
+                            case MBEDTLS_PK_ECDSA:
+                                xPkcsKeyType = CKK_ECDSA;
+                                break;
+
+                            default:
+                                xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+                                break;
                         }
-                        else
-                        {
-                            xKeyType = mbedtls_pk_get_type( &xKeyContext );
 
-                            switch( xKeyType )
-                            {
-                                case MBEDTLS_PK_RSA:
-                                case MBEDTLS_PK_RSA_ALT:
-                                case MBEDTLS_PK_RSASSA_PSS:
-                                    xPkcsKeyType = CKK_RSA;
-                                    break;
-
-                                case MBEDTLS_PK_ECKEY:
-                                case MBEDTLS_PK_ECKEY_DH:
-                                    xPkcsKeyType = CKK_EC;
-                                    break;
-
-                                case MBEDTLS_PK_ECDSA:
-                                    xPkcsKeyType = CKK_ECDSA;
-                                    break;
-
-                                default:
-                                    xResult = CKR_ATTRIBUTE_VALUE_INVALID;
-                                    break;
-                            }
-
-                            memcpy( pxTemplate[ iAttrib ].pValue, &xPkcsKeyType, sizeof( CK_KEY_TYPE ) );
-                        }
+                        memcpy( pxTemplate[ iAttrib ].pValue, &xPkcsKeyType, sizeof( CK_KEY_TYPE ) );
                     }
 
                     break;

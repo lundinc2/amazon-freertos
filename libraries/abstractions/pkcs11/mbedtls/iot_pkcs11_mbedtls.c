@@ -3135,7 +3135,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_DigestFinal )( CK_SESSION_HANDLE xSession,
 
     P11SessionPtr_t pxSession = prvSessionPointerFromHandle( xSession );
 
-    if( ( pulDigestLen == NULL ) || ( pxSession == NULL ) )
+    if( pulDigestLen == NULL )
     {
         xResult = CKR_ARGUMENTS_BAD;
     }
@@ -3539,9 +3539,9 @@ CK_DECLARE_FUNCTION( CK_RV, C_VerifyInit )( CK_SESSION_HANDLE xSession,
     {
         PKCS11_PRINT( ( "ERROR: Null verification mechanism provided. \r\n" ) );
         xResult = CKR_ARGUMENTS_BAD;
-    } 
+    }
 
-    if( ( CKR_OK == xResult ) && ( operationActive( pxSession ) ) )
+    if( ( xResult == CKR_OK ) && ( operationActive( pxSession ) ) )
     {
         xResult = CKR_OPERATION_ACTIVE;
     }

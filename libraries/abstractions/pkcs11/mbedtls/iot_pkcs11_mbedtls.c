@@ -3371,11 +3371,11 @@ CK_DECLARE_FUNCTION( CK_RV, C_Sign )( CK_SESSION_HANDLE xSession,
     uint8_t ecSignature[ pkcs11ECDSA_P256_SIGNATURE_LENGTH + 15 ]; /*TODO: Figure out this length. */
     int lMbedTLSResult;
 
-    if( ( NULL == pulSignatureLen ) || ( NULL == pucData ) )
+    if( ( NULL == pulSignatureLen ) || ( NULL == pucData ) || ( pxSessionObj == NULL) )
     {
         xResult = CKR_ARGUMENTS_BAD;
     }
-    else if( pxSessionObj != NULL )
+	if( xResult == CKR_OK )
     {
         /* Update the signature length. */
         if( pxSessionObj->xOperationSignMechanism == CKM_RSA_PKCS )

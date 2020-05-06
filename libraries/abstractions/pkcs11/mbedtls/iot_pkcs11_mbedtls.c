@@ -3135,7 +3135,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_DigestFinal )( CK_SESSION_HANDLE xSession,
 
     P11SessionPtr_t pxSession = prvSessionPointerFromHandle( xSession );
 
-    if( pulDigestLen == NULL )
+    if( ( pulDigestLen == NULL ) || ( pxSession == NULL ) )
     {
         xResult = CKR_ARGUMENTS_BAD;
     }
@@ -3232,7 +3232,8 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE xSession,
         PKCS11_PRINT( ( "ERROR: Null signing mechanism provided. \r\n" ) );
         xResult = CKR_ARGUMENTS_BAD;
     }
-    else if( ( pxSession != NULL ) && ( operationActive( pxSession ) ) )
+
+    if( ( xResult == CKR_OK ) && ( operationActive( pxSession ) ) )
     {
         xResult = CKR_OPERATION_ACTIVE;
     }
@@ -3387,7 +3388,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Sign )( CK_SESSION_HANDLE xSession,
     uint8_t ecSignature[ pkcs11ECDSA_P256_SIGNATURE_LENGTH + 15 ]; /*TODO: Figure out this length. */
     int lMbedTLSResult;
 
-    if( ( NULL == pulSignatureLen ) || ( NULL == pucData ) || ( pxSessionObj == NULL) )
+    if( ( NULL == pulSignatureLen ) || ( NULL == pucData ) )
     {
         xResult = CKR_ARGUMENTS_BAD;
     }
@@ -3539,7 +3540,8 @@ CK_DECLARE_FUNCTION( CK_RV, C_VerifyInit )( CK_SESSION_HANDLE xSession,
         PKCS11_PRINT( ( "ERROR: Null verification mechanism provided. \r\n" ) );
         xResult = CKR_ARGUMENTS_BAD;
     } 
-    else if( ( NULL != pxSession ) && ( operationActive( pxSession ) ) )
+
+    if( ( CKR_OK == xResult ) && ( operationActive( pxSession ) ) )
     {
         xResult = CKR_OPERATION_ACTIVE;
     }

@@ -1362,9 +1362,7 @@ void test_pkcs11_PKCS11_PAL_DestroyObject( void )
     xQueueGenericSend_IgnoreAndReturn( pdTRUE );
     PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
     xResult = PKCS11_PAL_DestroyObject( xObject );
-
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
-
 
     xResult = prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );

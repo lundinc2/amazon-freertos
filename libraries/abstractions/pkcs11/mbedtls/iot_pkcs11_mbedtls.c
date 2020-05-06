@@ -501,10 +501,8 @@ CK_RV prvMbedTLS_Initialize( void )
         if( xP11Context.xObjectList.xMutex == NULL )
         {
             xResult = CKR_HOST_MEMORY;
-    {
-        xResult = CKR_HOST_MEMORY;
+        }
     }
-
     if( xResult == CKR_OK )
     {
         CRYPTO_Init();
@@ -1199,18 +1197,6 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
             {
                 xResult = CKR_HOST_MEMORY;
             }
-
-            pxSessionObj->xVerifyMutex = xSemaphoreCreateMutex();
-
-            if( NULL == pxSessionObj->xVerifyMutex )
-            {
-                xResult = CKR_HOST_MEMORY;
-            }
-        }
-    }
-
-    if( CKR_OK == xResult )
-    {
 
             pxSessionObj->xVerifyMutex = xSemaphoreCreateMutex();
 

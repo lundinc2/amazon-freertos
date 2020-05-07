@@ -554,6 +554,73 @@ CK_RV prvGetObjectClass( CK_ATTRIBUTE_PTR pxTemplate,
 
     return xResult;
 }
+
+/**
+ * @brief Parses attribute values for a certificate.
+ *
+ */
+CK_RV prvCertAttParse( CK_ATTRIBUTE_PTR pxAttribute,
+                       CK_CERTIFICATE_TYPE * pxCertificateType,
+                       CK_BYTE_PTR * ppxCertificateValue,
+                       CK_ULONG * pxCertificateLength,
+                       CK_ATTRIBUTE_PTR * ppxLabel,
+                       CK_BBOOL * pxBool )
+{
+    CK_RV xResult = CKR_OK;
+
+    switch( pxAttribute->type )
+    {
+        case ( CKA_VALUE ):
+            *ppxCertificateValue = pxAttribute->pValue;
+            *pxCertificateLength = pxAttribute->ulValueLen;
+            break;
+
+        case ( CKA_LABEL ):
+
+            if( pxAttribute->ulValueLen <= pkcs11configMAX_LABEL_LENGTH )
+            {
+                *ppxLabel = pxAttribute;
+            }
+            else
+            {
+                xResult = CKR_DATA_LEN_RANGE;
+            }
+
+            break;
+
+        case ( CKA_CERTIFICATE_TYPE ):
+            memcpy( &pxCertificateType, pxAttribute->pValue, sizeof( CK_CERTIFICATE_TYPE ) );
+
+            if( pxCertificateType != CKC_X_509 )
+            {
+                xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+            }
+
+            break;
+
+        case ( CKA_TOKEN ):
+            memcpy( pxBool, pxAttribute->pValue, sizeof( CK_BBOOL ) );
+
+            if( *pxBool != CK_TRUE )
+            {
+                PKCS11_PRINT( ( "ERROR: Only token key object is supported. \r\n" ) );
+                xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+            }
+
+            break;
+
+        case ( CKA_CLASS ):
+        case ( CKA_SUBJECT ):
+
+            /* Do nothing.  This was already parsed out of the template previously. */
+            break;
+
+        default:
+            xResult = CKR_TEMPLATE_INCONSISTENT;
+            break;
+    }
+    return xResult;
+}
 /*-----------------------------------------------------------------------*/
 /* Functions for maintaining the PKCS #11 module's label-handle lookups. */
 /*-----------------------------------------------------------------------*/
@@ -704,10 +771,6 @@ CK_RV prvAddObjectToList( CK_OBJECT_HANDLE xPalHandle,
             {
                 lInsertIndex = lSearchIndex;
             }
-            else
-            {
-                break;
-            }
         }
 
         if( xObjectFound == CK_FALSE )
@@ -761,12 +824,12 @@ CK_RV prvAddObjectToList( CK_OBJECT_HANDLE xPalHandle,
 
             if( xResult == CKR_OK )
             {
+                xFreeMemory = CK_TRUE;
                 /* Some ports return a pointer to memory for which using memset directly won't work. */
                 pxZeroedData = pvPortMalloc( ulObjectLength );
 
                 if( NULL != pxZeroedData )
                 {
-                    xFreeMemory = CK_TRUE;
                     /* Zero out the object. */
                     memset( pxZeroedData, 0x0, ulObjectLength );
                     /* Create an object label attribute. */
@@ -1219,9 +1282,13 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
         pxSessionObj->ulState =
             0u != ( xFlags & CKF_RW_SESSION ) ? CKS_RW_PUBLIC_SESSION : CKS_RO_PUBLIC_SESSION;
         pxSessionObj->xOpened = CK_TRUE;
-        /*
-         *   Initialize the operation in progress.
-         */
+    }
+
+    /*
+     *   Initialize the operation in progress.
+     */
+    if( CKR_OK == xResult )
+    {
         pxSessionObj->xOperationDigestMechanism = pkcs11NO_OPERATION;
         pxSessionObj->xOperationVerifyMechanism = pkcs11NO_OPERATION;
         pxSessionObj->xOperationSignMechanism = pkcs11NO_OPERATION;
@@ -1365,63 +1432,17 @@ CK_RV prvCreateCertificate( CK_ATTRIBUTE_PTR pxTemplate,
     CK_CERTIFICATE_TYPE xCertificateType = 0; /* = CKC_X_509; */
     uint32_t ulIndex = 0;
     CK_BBOOL xBool = CK_FALSE;
-    CK_ATTRIBUTE xAttribute;
 
     /* Search for the pointer to the certificate VALUE. */
     for( ulIndex = 0; ulIndex < ulCount; ulIndex++ )
     {
-        xAttribute = pxTemplate[ ulIndex ];
-
-        switch( xAttribute.type )
+        xResult = prvCertAttParse( &pxTemplate[ ulIndex ], &xCertificateType, 
+                &pxCertificateValue, &xCertificateLength, 
+                &pxLabel, &xBool );
+        
+        if( xResult != CKR_OK )
         {
-            case ( CKA_VALUE ):
-                pxCertificateValue = xAttribute.pValue;
-                xCertificateLength = xAttribute.ulValueLen;
-                break;
-
-            case ( CKA_LABEL ):
-
-                if( xAttribute.ulValueLen <= pkcs11configMAX_LABEL_LENGTH )
-                {
-                    pxLabel = &pxTemplate[ ulIndex ];
-                }
-                else
-                {
-                    xResult = CKR_DATA_LEN_RANGE;
-                }
-
-                break;
-
-            case ( CKA_CERTIFICATE_TYPE ):
-                memcpy( &xCertificateType, xAttribute.pValue, sizeof( CK_CERTIFICATE_TYPE ) );
-
-                if( xCertificateType != CKC_X_509 )
-                {
-                    xResult = CKR_ATTRIBUTE_VALUE_INVALID;
-                }
-
-                break;
-
-            case ( CKA_TOKEN ):
-                memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
-
-                if( xBool != CK_TRUE )
-                {
-                    PKCS11_PRINT( ( "ERROR: Only token key object is supported. \r\n" ) );
-                    xResult = CKR_ATTRIBUTE_VALUE_INVALID;
-                }
-
-                break;
-
-            case ( CKA_CLASS ):
-            case ( CKA_SUBJECT ):
-
-                /* Do nothing.  This was already parsed out of the template previously. */
-                break;
-
-            default:
-                xResult = CKR_TEMPLATE_INCONSISTENT;
-                break;
+            break;
         }
     }
 
@@ -2154,7 +2175,6 @@ CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
     CK_RV xResult = CKR_OK;
     CK_ATTRIBUTE_PTR pxLabel = NULL;
     CK_OBJECT_HANDLE xPalHandle = CK_INVALID_HANDLE;
-    mbedtls_ecp_keypair * pxKeyPair = NULL;
 
     mbedtls_pk_init( &xMbedContext );
 
@@ -2188,7 +2208,7 @@ CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
 
                 /* If a key had been found by prvGetExistingKeyComponent, the keypair context
                  * would have been malloc'ed. */
-                pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
+                mbedtls_ecp_keypair * pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
 
                 if( pxKeyPair != NULL )
                 {

@@ -704,6 +704,10 @@ CK_RV prvAddObjectToList( CK_OBJECT_HANDLE xPalHandle,
             {
                 lInsertIndex = lSearchIndex;
             }
+            else
+            {
+                break;
+            }
         }
 
         if( xObjectFound == CK_FALSE )
@@ -757,12 +761,12 @@ CK_RV prvAddObjectToList( CK_OBJECT_HANDLE xPalHandle,
 
             if( xResult == CKR_OK )
             {
-                xFreeMemory = CK_TRUE;
                 /* Some ports return a pointer to memory for which using memset directly won't work. */
                 pxZeroedData = pvPortMalloc( ulObjectLength );
 
                 if( NULL != pxZeroedData )
                 {
+                    xFreeMemory = CK_TRUE;
                     /* Zero out the object. */
                     memset( pxZeroedData, 0x0, ulObjectLength );
                     /* Create an object label attribute. */
@@ -1215,13 +1219,9 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
         pxSessionObj->ulState =
             0u != ( xFlags & CKF_RW_SESSION ) ? CKS_RW_PUBLIC_SESSION : CKS_RO_PUBLIC_SESSION;
         pxSessionObj->xOpened = CK_TRUE;
-    }
-
-    /*
-     *   Initialize the operation in progress.
-     */
-    if( CKR_OK == xResult )
-    {
+        /*
+         *   Initialize the operation in progress.
+         */
         pxSessionObj->xOperationDigestMechanism = pkcs11NO_OPERATION;
         pxSessionObj->xOperationVerifyMechanism = pkcs11NO_OPERATION;
         pxSessionObj->xOperationSignMechanism = pkcs11NO_OPERATION;
@@ -2030,11 +2030,6 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
         vPortFree( pxDerKey );
     }
 
-    if( pxRsaCtx != NULL )
-    {
-        vPortFree( pxRsaCtx );
-    }
-
     return xResult;
 }
 
@@ -2159,6 +2154,7 @@ CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
     CK_RV xResult = CKR_OK;
     CK_ATTRIBUTE_PTR pxLabel = NULL;
     CK_OBJECT_HANDLE xPalHandle = CK_INVALID_HANDLE;
+    mbedtls_ecp_keypair * pxKeyPair = NULL;
 
     mbedtls_pk_init( &xMbedContext );
 
@@ -2192,7 +2188,7 @@ CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
 
                 /* If a key had been found by prvGetExistingKeyComponent, the keypair context
                  * would have been malloc'ed. */
-                mbedtls_ecp_keypair * pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
+                pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
 
                 if( pxKeyPair != NULL )
                 {

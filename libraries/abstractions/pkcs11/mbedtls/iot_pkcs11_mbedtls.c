@@ -621,6 +621,156 @@ CK_RV prvCertAttParse( CK_ATTRIBUTE_PTR pxAttribute,
     }
     return xResult;
 }
+
+/**
+ * @brief Parses attribute values for an EC Key.
+ *
+ */
+CK_RV prvEcKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
+                       CK_ATTRIBUTE_PTR * ppxLabel,
+                       CK_BBOOL * pxBool, 
+                       mbedtls_pk_context * pxMbedContext,
+                       CK_BBOOL xIsPrivate )
+{
+    CK_RV xResult = CKR_OK;
+    int lMbedReturn = 0;
+    mbedtls_ecp_keypair * pxKeyPair = ( mbedtls_ecp_keypair * ) pxMbedContext->pk_ctx; 
+
+    switch( pxAttribute->type )
+    {
+     case ( CKA_CLASS ):
+     case ( CKA_KEY_TYPE ):
+
+         /* Do nothing.
+          * Key type and class were checked previously. */
+         break;
+
+     case ( CKA_TOKEN ):
+         memcpy( pxBool, pxAttribute->pValue, sizeof( CK_BBOOL ) );
+
+         if( *pxBool != CK_TRUE )
+         {
+             PKCS11_PRINT( ( "ERROR: Only token key creation is supported. \r\n" ) );
+             xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+         }
+
+         break;
+
+     case ( CKA_LABEL ):
+
+         if( pxAttribute->ulValueLen < pkcs11configMAX_LABEL_LENGTH )
+         {
+             *ppxLabel = &pxAttribute;
+         }
+         else
+         {
+             xResult = CKR_DATA_LEN_RANGE;
+         }
+
+         break;
+
+     case ( CKA_VERIFY ):
+         memcpy( pxBool, pxAttribute->pValue, pxAttribute->ulValueLen );
+
+         if( *pxBool != CK_TRUE )
+         {
+             PKCS11_PRINT( ( "Only EC Public Keys with verify permissions supported. \r\n" ) );
+             xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+         }
+
+         break;
+
+     case ( CKA_EC_PARAMS ):
+
+         if( memcmp( ( CK_BYTE[] ) pkcs11DER_ENCODED_OID_P256, pxAttribute->pValue, pxAttribute->ulValueLen ) )
+         {
+             PKCS11_PRINT( ( "ERROR: Only elliptic curve P-256 is supported.\r\n" ) );
+             xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+         }
+
+         break;
+
+     case ( CKA_EC_POINT ):
+         /* The first 2 bytes are for ASN1 type/length encoding. */
+         lMbedReturn = mbedtls_ecp_point_read_binary( &pxKeyPair->grp, 
+                                                     &pxKeyPair->Q, 
+                                                     ( ( uint8_t * ) ( pxAttribute->pValue ) + 2 ), 
+                                                     ( pxAttribute->ulValueLen - 2 ) );
+
+            if( lMbedReturn != 0 )
+            {
+                xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+            }
+
+            break;
+
+        default:
+            PKCS11_PRINT( ( "Unsupported attribute found for EC public key. %d \r\n", pxAttribute->type ) );
+            xResult = CKR_ATTRIBUTE_TYPE_INVALID;
+            break;
+    }
+    return xResult;
+}
+
+/**
+ * @brief Save a DER formatted key in the PAL>
+ *
+ */
+static CK_RV prvSaveDerKey( mbedtls_pk_context * pxMbedContext,
+                       CK_OBJECT_HANDLE_PTR pxObject,
+                       CK_ATTRIBUTE_PTR pxLabel)
+{
+    CK_RV xResult = CKR_OK;
+    CK_BYTE_PTR pxDerKey;
+    int lDerKeyLength = 0;
+    CK_OBJECT_HANDLE xPalHandle = CK_INVALID_HANDLE;
+    pxDerKey = pvPortMalloc( MAX_PUBLIC_KEY_SIZE );
+
+    if( pxDerKey == NULL )
+    {
+        xResult = CKR_HOST_MEMORY;
+    }
+
+    if( xResult == CKR_OK )
+    {
+        lDerKeyLength = mbedtls_pk_write_pubkey_der( pxMbedContext, pxDerKey, MAX_PUBLIC_KEY_SIZE );
+
+        if( lDerKeyLength < 0 ) 
+        {
+            PKCS11_PRINT( ( "mbedTLS sign failed with error %s : %s \r\n",
+                            mbedtlsHighLevelCodeOrDefault( lDerKeyLength ),
+                            mbedtlsLowLevelCodeOrDefault( lDerKeyLength ) ) );
+            xResult = CKR_FUNCTION_FAILED;
+        }
+        /* Clean up the mbedTLS key context. */
+        mbedtls_pk_free( pxMbedContext );
+    }
+
+    if( xResult == CKR_OK )
+    {
+        xPalHandle = PKCS11_PAL_SaveObject( pxLabel,
+                                            pxDerKey + ( MAX_LENGTH_KEY - lDerKeyLength ),
+                                            lDerKeyLength );
+
+        if( xPalHandle == CK_INVALID_HANDLE )
+        {
+            xResult = CKR_DEVICE_MEMORY;
+        }
+    }
+
+    if( xResult == CKR_OK )
+    {
+        xResult = prvAddObjectToList( xPalHandle, pxObject, pxLabel->pValue, pxLabel->ulValueLen );
+    }
+
+    if( pxDerKey != NULL )
+    {
+        vPortFree( pxDerKey );
+    }
+
+    return xResult;
+}
+
 /*-----------------------------------------------------------------------*/
 /* Functions for maintaining the PKCS #11 module's label-handle lookups. */
 /*-----------------------------------------------------------------------*/
@@ -2063,94 +2213,81 @@ CK_RV prvCreatePrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
  * @param[in] ulCount length of templates array.
  *
  */
-CK_RV prvCreateECPublicKey( mbedtls_pk_context * pxMbedContext,
-                            CK_ATTRIBUTE_PTR * ppxLabel,
-                            CK_ATTRIBUTE_PTR pxTemplate,
-                            CK_ULONG ulCount )
+static CK_RV prvCreateECPublicKey( CK_ATTRIBUTE_PTR pxTemplate,
+                                   CK_ULONG ulCount,
+                                   CK_OBJECT_HANDLE_PTR pxObject )
 {
     CK_RV xResult = CKR_OK;
     int lMbedReturn;
     CK_BBOOL xBool;
     uint32_t ulIndex;
     CK_ATTRIBUTE xAttribute;
+    CK_ATTRIBUTE_PTR pxLabel = NULL;
+    CK_OBJECT_HANDLE xPalHandle = CK_INVALID_HANDLE;
+    mbedtls_pk_context xMbedContext;
+    mbedtls_ecp_keypair * pxKeyPair;
+
+    mbedtls_pk_init( &xMbedContext );
+
+    prvGetLabel( &pxLabel, pxTemplate, ulCount );
+
+    if( pxLabel == NULL )
+    {
+        xResult = CKR_ARGUMENTS_BAD;
+    }
+    else
+    {
+        xResult = prvGetExistingKeyComponent( &xPalHandle, &xMbedContext, pxLabel );
+    }
+
+    if( ( xResult == CKR_OK ) && ( xPalHandle == CK_INVALID_HANDLE ) )
+    {
+        /* An mbedTLS key is comprised of 2 pieces of data- an "info" and a "context".
+         * Since a valid key was not found by prvGetExistingKeyComponent, we are going to initialize
+         * the structure so that the mbedTLS structures will look the same as they would if a key
+         * had been found, minus the private key component. */
+
+        /* If a key had been found by prvGetExistingKeyComponent, the keypair context
+         * would have been malloc'ed. */
+        pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
+
+        if( pxKeyPair != NULL )
+        {
+            /* Initialize the info. */
+            xMbedContext.pk_info = &mbedtls_eckey_info;
+
+            /* Initialize the context. */
+            xMbedContext.pk_ctx = pxKeyPair;
+            mbedtls_ecp_keypair_init( pxKeyPair );
+            mbedtls_ecp_group_init( &pxKeyPair->grp );
+            /*/ * At this time, only P-256 curves are supported. * / */
+            mbedtls_ecp_group_load( &pxKeyPair->grp, MBEDTLS_ECP_DP_SECP256R1 );
+        }
+        else
+        {
+            xResult = CKR_HOST_MEMORY;
+        }
+    }
 
     /* Key will be assembled in the mbedTLS key context and then exported to DER for storage. */
-    mbedtls_ecp_keypair * pxKeyPair = ( mbedtls_ecp_keypair * ) pxMbedContext->pk_ctx;
 
     for( ulIndex = 0; ulIndex < ulCount; ulIndex++ )
     {
         xAttribute = pxTemplate[ ulIndex ];
+        xResult = prvEcKeyAttParse( &xAttribute, &pxLabel, &xBool, 
+                                    &xMbedContext, CK_FALSE );
 
-        switch( xAttribute.type )
+        if( xResult != CKR_OK )
         {
-            case ( CKA_CLASS ):
-            case ( CKA_KEY_TYPE ):
-
-                /* Do nothing.
-                 * Key type and class were checked previously. */
-                break;
-
-            case ( CKA_TOKEN ):
-                memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
-
-                if( xBool != CK_TRUE )
-                {
-                    PKCS11_PRINT( ( "ERROR: Only token key creation is supported. \r\n" ) );
-                    xResult = CKR_ATTRIBUTE_VALUE_INVALID;
-                }
-
-                break;
-
-            case ( CKA_LABEL ):
-
-                if( xAttribute.ulValueLen < pkcs11configMAX_LABEL_LENGTH )
-                {
-                    *ppxLabel = &pxTemplate[ ulIndex ];
-                }
-                else
-                {
-                    xResult = CKR_DATA_LEN_RANGE;
-                }
-
-                break;
-
-            case ( CKA_VERIFY ):
-                memcpy( &xBool, xAttribute.pValue, xAttribute.ulValueLen );
-
-                if( xBool != CK_TRUE )
-                {
-                    PKCS11_PRINT( ( "Only EC Public Keys with verify permissions supported. \r\n" ) );
-                    xResult = CKR_ATTRIBUTE_VALUE_INVALID;
-                }
-
-                break;
-
-            case ( CKA_EC_PARAMS ):
-
-                if( memcmp( ( CK_BYTE[] ) pkcs11DER_ENCODED_OID_P256, xAttribute.pValue, xAttribute.ulValueLen ) )
-                {
-                    PKCS11_PRINT( ( "ERROR: Only elliptic curve P-256 is supported.\r\n" ) );
-                    xResult = CKR_ATTRIBUTE_VALUE_INVALID;
-                }
-
-                break;
-
-            case ( CKA_EC_POINT ):
-                /* The first 2 bytes are for ASN1 type/length encoding. */
-                lMbedReturn = mbedtls_ecp_point_read_binary( &pxKeyPair->grp, &pxKeyPair->Q, ( ( uint8_t * ) ( xAttribute.pValue ) + 2 ), ( xAttribute.ulValueLen - 2 ) );
-
-                if( lMbedReturn != 0 )
-                {
-                    xResult = CKR_ATTRIBUTE_VALUE_INVALID;
-                }
-
-                break;
-
-            default:
-                PKCS11_PRINT( ( "Unsupported attribute found for EC public key. %d \r\n", xAttribute.type ) );
-                xResult = CKR_ATTRIBUTE_TYPE_INVALID;
-                break;
+            break;
         }
+    }
+
+    if( xResult == CKR_OK )
+    {
+        xResult = CK_RV prvSaveDerKey( &xMbedContext,
+                       CK_OBJECT_HANDLE_PTR pxObject,
+                       CK_ATTRIBUTE_PTR pxLabel)
     }
 
     return xResult;
@@ -2164,19 +2301,12 @@ CK_RV prvCreateECPublicKey( mbedtls_pk_context * pxMbedContext,
  * @param[in] pxObject PKCS #11 object handle.
  *
  */
-CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
+static CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
                           CK_ULONG ulCount,
                           CK_OBJECT_HANDLE_PTR pxObject )
 {
-    mbedtls_pk_context xMbedContext;
-    int lDerKeyLength = 0;
-    CK_BYTE_PTR pxDerKey = NULL;
     CK_KEY_TYPE xKeyType = 0;
     CK_RV xResult = CKR_OK;
-    CK_ATTRIBUTE_PTR pxLabel = NULL;
-    CK_OBJECT_HANDLE xPalHandle = CK_INVALID_HANDLE;
-
-    mbedtls_pk_init( &xMbedContext );
 
     prvGetKeyType( &xKeyType, pxTemplate, ulCount );
 
@@ -2184,108 +2314,16 @@ CK_RV prvCreatePublicKey( CK_ATTRIBUTE_PTR pxTemplate,
     {
         xResult = CKR_ATTRIBUTE_TYPE_INVALID;
     }
-
-    #if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 )
-        else if( xKeyType == CKK_EC ) /* CKK_EC = CKK_ECDSA. */
-        {
-            prvGetLabel( &pxLabel, pxTemplate, ulCount );
-
-            if( pxLabel == NULL )
-            {
-                xResult = CKR_ARGUMENTS_BAD;
-            }
-            else
-            {
-                xResult = prvGetExistingKeyComponent( &xPalHandle, &xMbedContext, pxLabel );
-            }
-
-            if( ( xResult == CKR_OK ) && ( xPalHandle == CK_INVALID_HANDLE ) )
-            {
-                /* An mbedTLS key is comprised of 2 pieces of data- an "info" and a "context".
-                 * Since a valid key was not found by prvGetExistingKeyComponent, we are going to initialize
-                 * the structure so that the mbedTLS structures will look the same as they would if a key
-                 * had been found, minus the private key component. */
-
-                /* If a key had been found by prvGetExistingKeyComponent, the keypair context
-                 * would have been malloc'ed. */
-                mbedtls_ecp_keypair * pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
-
-                if( pxKeyPair != NULL )
-                {
-                    /* Initialize the info. */
-                    xMbedContext.pk_info = &mbedtls_eckey_info;
-
-                    /* Initialize the context. */
-                    xMbedContext.pk_ctx = pxKeyPair;
-                    mbedtls_ecp_keypair_init( pxKeyPair );
-                    mbedtls_ecp_group_init( &pxKeyPair->grp );
-                    /*/ * At this time, only P-256 curves are supported. * / */
-                    mbedtls_ecp_group_load( &pxKeyPair->grp, MBEDTLS_ECP_DP_SECP256R1 );
-                }
-                else
-                {
-                    xResult = CKR_HOST_MEMORY;
-                }
-            }
-
-            if( xResult == CKR_OK )
-            {
-                xResult = prvCreateECPublicKey( &xMbedContext, &pxLabel, pxTemplate, ulCount );
-            }
-        }
-    #endif /* if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 ) */
+#if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 )
+    else if( xKeyType == CKK_EC ) /* CKK_EC = CKK_ECDSA. */
+    {
+        xResult = prvCreateECPublicKey( pxTemplate, ulCount, pxObject );
+    }
+#endif /* if ( pkcs11configSUPPRESS_ECDSA_MECHANISM != 1 ) */
     else
     {
         PKCS11_PRINT( ( "Invalid key type %d \r\n", xKeyType ) );
         xResult = CKR_MECHANISM_INVALID;
-    }
-
-    if( xResult == CKR_OK )
-    {
-        /* Store the key.*/
-        pxDerKey = pvPortMalloc( MAX_PUBLIC_KEY_SIZE );
-
-        if( pxDerKey == NULL )
-        {
-            xResult = CKR_HOST_MEMORY;
-        }
-    }
-
-    if( xResult == CKR_OK )
-    {
-        lDerKeyLength = mbedtls_pk_write_pubkey_der( &xMbedContext, pxDerKey, MAX_PUBLIC_KEY_SIZE );
-
-        if( lDerKeyLength < 0 ) 
-        {
-            PKCS11_PRINT( ( "mbedTLS sign failed with error %s : %s \r\n",
-                            mbedtlsHighLevelCodeOrDefault( lDerKeyLength ),
-                            mbedtlsLowLevelCodeOrDefault( lDerKeyLength ) ) );
-            xResult = CKR_FUNCTION_FAILED;
-        }
-        /* Clean up the mbedTLS key context. */
-        mbedtls_pk_free( &xMbedContext );
-    }
-
-    if( xResult == CKR_OK )
-    {
-        xPalHandle = PKCS11_PAL_SaveObject( pxLabel,
-                                            pxDerKey + ( MAX_LENGTH_KEY - lDerKeyLength ),
-                                            lDerKeyLength );
-
-        if( xPalHandle == CK_INVALID_HANDLE )
-        {
-            xResult = CKR_DEVICE_MEMORY;
-        }
-    }
-
-    if( xResult == CKR_OK )
-    {
-        xResult = prvAddObjectToList( xPalHandle, pxObject, pxLabel->pValue, pxLabel->ulValueLen );
-    }
-
-    if( pxDerKey != NULL )
-    {
-        vPortFree( pxDerKey );
     }
 
     return xResult;

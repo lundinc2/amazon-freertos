@@ -956,6 +956,9 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
 
     xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    
+    /* TODO: Remove this. */
+    usMallocFreeCalls--;
 }
 
 /*!
@@ -1015,6 +1018,9 @@ void test_pkcs11_C_CreateObjectECPubKey( void )
 
     xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    /* TODO: Remove this. */
+    usMallocFreeCalls--;
 }
 
 /*
@@ -1066,6 +1072,9 @@ void test_pkcs11_C_CreateObjectRSAPrivKey( void )
 
     xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    /* TODO: Remove this. */
+    usMallocFreeCalls--;
 }
 
 /*

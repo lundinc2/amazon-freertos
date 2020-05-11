@@ -774,6 +774,11 @@ static CK_RV prvEcPrivKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
             }
 
             break;
+
+        default:
+            PKCS11_PRINT( ( "Unknown attribute found for an EC private key. %d \r\n", pxAttribute->type ) );
+            xResult = CKR_TEMPLATE_INCONSISTENT;
+            break;
     }
 
     return xResult;
@@ -825,6 +830,10 @@ static CK_RV prvEcPubKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
                                 mbedtlsLowLevelCodeOrDefault( lMbedReturn ) ) );
             }
 
+            break;
+        default:
+            PKCS11_PRINT( ( "Unknown attribute found for an EC public key. %d \r\n", pxAttribute->type ) );
+            xResult = CKR_TEMPLATE_INCONSISTENT;
             break;
     }
 
@@ -878,6 +887,10 @@ static CK_RV prvEcKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
                 xResult = CKR_OK;
             }
 
+            break;
+
+        default:
+            /* The rest of the cases will be handled in the helper functions */
             break;
     }
 

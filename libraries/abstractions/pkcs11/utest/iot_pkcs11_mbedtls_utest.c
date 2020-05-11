@@ -67,25 +67,25 @@
 #define EC_PARAMS_LENGTH    10
 #define EC_D_LENGTH         32
 
-#define EC_PRIV_KEY_INITIALIZER                                                    \
-    {                                                                              \
-        { CKA_CLASS, &xPrivateKeyClass, sizeof( CK_OBJECT_CLASS ) },               \
-        { CKA_KEY_TYPE, &xPrivateKeyType, sizeof( CK_KEY_TYPE ) },                 \
+#define EC_PRIV_KEY_INITIALIZER                                                            \
+    {                                                                                      \
+        { CKA_CLASS, &xPrivateKeyClass, sizeof( CK_OBJECT_CLASS ) },                       \
+        { CKA_KEY_TYPE, &xPrivateKeyType, sizeof( CK_KEY_TYPE ) },                         \
         { CKA_LABEL, pucPrivLabel, ( CK_ULONG ) strlen( ( const char * ) pucPrivLabel ) }, \
-        { CKA_TOKEN, &xTrue, sizeof( CK_BBOOL ) },                                 \
-        { CKA_SIGN, &xTrue, sizeof( CK_BBOOL ) },                                  \
-        { CKA_EC_PARAMS, pxEcPrivParams, EC_PARAMS_LENGTH },                           \
-        { CKA_VALUE, pxD, EC_D_LENGTH }                                            \
+        { CKA_TOKEN, &xTrue, sizeof( CK_BBOOL ) },                                         \
+        { CKA_SIGN, &xTrue, sizeof( CK_BBOOL ) },                                          \
+        { CKA_EC_PARAMS, pxEcPrivParams, EC_PARAMS_LENGTH },                               \
+        { CKA_VALUE, pxD, EC_D_LENGTH }                                                    \
     }
 
-#define EC_PUB_KEY_INITIALIZER                                       \
-    {                                                                \
-        { CKA_CLASS, &xPublicKeyClass, sizeof( xPublicKeyClass ) },  \
-        { CKA_KEY_TYPE, &xPublicKeyType, sizeof( xPublicKeyType ) }, \
-        { CKA_TOKEN, &xTrue, sizeof( xTrue ) },                      \
-        { CKA_VERIFY, &xTrue, sizeof( xTrue ) },                     \
+#define EC_PUB_KEY_INITIALIZER                                             \
+    {                                                                      \
+        { CKA_CLASS, &xPublicKeyClass, sizeof( xPublicKeyClass ) },        \
+        { CKA_KEY_TYPE, &xPublicKeyType, sizeof( xPublicKeyType ) },       \
+        { CKA_TOKEN, &xTrue, sizeof( xTrue ) },                            \
+        { CKA_VERIFY, &xTrue, sizeof( xTrue ) },                           \
         { CKA_EC_PARAMS, pxEcPubParams, sizeof( pxEcPubParams ) },         \
-        { CKA_EC_POINT, pxEcPoint, xLength + 2 },                    \
+        { CKA_EC_POINT, pxEcPoint, xLength + 2 },                          \
         { CKA_LABEL, pucPubLabel, strlen( ( const char * ) pucPubLabel ) } \
     }
 
@@ -296,7 +296,7 @@ static CK_RV prvCreateCert( CK_SESSION_HANDLE_PTR pxSession,
  *
  */
 static CK_RV prvCreateEcPriv( CK_SESSION_HANDLE_PTR pxSession,
-                             CK_OBJECT_HANDLE_PTR pxObject )
+                              CK_OBJECT_HANDLE_PTR pxObject )
 {
     CK_RV xResult = CKR_OK;
     CK_KEY_TYPE xPrivateKeyType = CKK_EC;
@@ -798,7 +798,7 @@ void test_pkcs11_C_OpenSessionQueueMemFail( void )
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     pvPortMalloc_Stub( pvPkcs11MallocCb );
-    xQueueCreateMutex_IgnoreAndReturn( (SemaphoreHandle_t ) &xResult );
+    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
     xQueueCreateMutex_IgnoreAndReturn( NULL );
     vPortFree_Stub( vPkcs11FreeCb );
     vQueueDelete_CMockIgnore();
@@ -807,7 +807,7 @@ void test_pkcs11_C_OpenSessionQueueMemFail( void )
 
     pvPortMalloc_Stub( pvPkcs11MallocCb );
     xQueueCreateMutex_IgnoreAndReturn( NULL );
-    xQueueCreateMutex_IgnoreAndReturn( (SemaphoreHandle_t ) &xResult );
+    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
     vPortFree_Stub( vPkcs11FreeCb );
     vQueueDelete_CMockIgnore();
     xResult = C_OpenSession( 0, xFlags, NULL, 0, &xSession );
@@ -930,7 +930,7 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
     mbedtls_pk_parse_key_IgnoreAndReturn( 1 );
     vLoggingPrintf_CMockIgnore();
     mbedtls_strerror_highlevel_IgnoreAndReturn( NULL );
-    mbedtls_strerror_lowlevel_IgnoreAndReturn( NULL );    
+    mbedtls_strerror_lowlevel_IgnoreAndReturn( NULL );
     PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
     pvPortMalloc_IgnoreAndReturn( &xKeyContext );
     mbedtls_ecp_keypair_init_CMockIgnore();
@@ -956,7 +956,7 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
 
     xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
-    
+
     /* TODO: Remove this. */
     usMallocFreeCalls--;
 }
@@ -1172,6 +1172,7 @@ void test_pkcs11_C_GetAttributeValueCert( void )
     CK_OBJECT_HANDLE xObject = 0;
     CK_ULONG ulCount = 1;
     PKCS11_CertificateTemplate_t xCertificateTemplate = { 0 };
+
     xResult = prvInitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
@@ -1242,7 +1243,7 @@ void test_pkcs11_C_GetAttributeValueEcParams( void )
     xResult = C_GetAttributeValue( xSession, xObject, ( CK_ATTRIBUTE_PTR ) &xTemplate, ulCount );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
     TEST_ASSERT_EQUAL( ulKnownPoint, ulPoint );
-    
+
     xResult = prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
@@ -1932,23 +1933,23 @@ void test_pkcs11_C_GenerateKeyPairECDSA( void )
     };
     CK_BYTE xEcParams[] = pkcs11DER_ENCODED_OID_P256; /* prime256v1 */
     CK_KEY_TYPE xKeyType = CKK_EC;
- 
+
     CK_BBOOL xTrue = CK_TRUE;
     CK_ATTRIBUTE xPublicKeyTemplate[] =
     {
-        { CKA_KEY_TYPE,  &xKeyType, sizeof( xKeyType )                           },
-        { CKA_VERIFY,    &xTrue,    sizeof( xTrue )                              },
-        { CKA_EC_PARAMS, xEcParams, sizeof( xEcParams )                          },
-        { CKA_LABEL,     pucPublicKeyLabel,    strlen( ( const char * ) pucPublicKeyLabel ) }
+        { CKA_KEY_TYPE,  &xKeyType,         sizeof( xKeyType )                           },
+        { CKA_VERIFY,    &xTrue,            sizeof( xTrue )                              },
+        { CKA_EC_PARAMS, xEcParams,         sizeof( xEcParams )                          },
+        { CKA_LABEL,     pucPublicKeyLabel, strlen( ( const char * ) pucPublicKeyLabel ) }
     };
- 
+
     CK_ATTRIBUTE xPrivateKeyTemplate[] =
     {
-        { CKA_KEY_TYPE, &xKeyType, sizeof( xKeyType )                            },
-        { CKA_TOKEN,    &xTrue,    sizeof( xTrue )                               },
-        { CKA_PRIVATE,  &xTrue,    sizeof( xTrue )                               },
-        { CKA_SIGN,     &xTrue,    sizeof( xTrue )                               },
-        { CKA_LABEL,    pucPrivateKeyLabel,   strlen( ( const char * ) pucPrivateKeyLabel ) }
+        { CKA_KEY_TYPE, &xKeyType,          sizeof( xKeyType )                            },
+        { CKA_TOKEN,    &xTrue,             sizeof( xTrue )                               },
+        { CKA_PRIVATE,  &xTrue,             sizeof( xTrue )                               },
+        { CKA_SIGN,     &xTrue,             sizeof( xTrue )                               },
+        { CKA_LABEL,    pucPrivateKeyLabel, strlen( ( const char * ) pucPrivateKeyLabel ) }
     };
 
     mbedtls_pk_init_CMockIgnore();
@@ -1963,9 +1964,9 @@ void test_pkcs11_C_GenerateKeyPairECDSA( void )
     xQueueGenericSend_IgnoreAndReturn( pdTRUE );
     vPortFree_Stub( vPkcs11FreeCb );
     mbedtls_pk_free_CMockIgnore();
-    xResult = C_GenerateKeyPair( xSession, &xMechanism, xPublicKeyTemplate, 
-                                 sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),  
-                                 xPrivateKeyTemplate, sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ), 
+    xResult = C_GenerateKeyPair( xSession, &xMechanism, xPublicKeyTemplate,
+                                 sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                                 xPrivateKeyTemplate, sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  &xPubKeyHandle, &xPrivKeyHandle );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 

@@ -957,7 +957,9 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
     xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    /* TODO: Remove this. */
+    /* TODO: Remove this. Currently memory is malloc'd by PKCS #11 and free'd in the
+     * MbedTLS stack, but those functions are stubbed out. Need to update this test case
+     * to have a memory life cycle that is properly mocked. */
     usMallocFreeCalls--;
 }
 
@@ -1019,7 +1021,9 @@ void test_pkcs11_C_CreateObjectECPubKey( void )
     xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    /* TODO: Remove this. */
+    /* TODO: Remove this. Currently memory is malloc'd by PKCS #11 and free'd in the
+     * MbedTLS stack, but those functions are stubbed out. Need to update this test case
+     * to have a memory life cycle that is properly mocked. */
     usMallocFreeCalls--;
 }
 
@@ -1073,7 +1077,9 @@ void test_pkcs11_C_CreateObjectRSAPrivKey( void )
     xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    /* TODO: Remove this. */
+    /* TODO: Remove this. Currently memory is malloc'd by PKCS #11 and free'd in the
+     * MbedTLS stack, but those functions are stubbed out. Need to update this test case
+     * to have a memory life cycle that is properly mocked. */
     usMallocFreeCalls--;
 }
 

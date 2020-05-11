@@ -589,9 +589,9 @@ static CK_RV prvCertAttParse( CK_ATTRIBUTE_PTR pxAttribute,
             break;
 
         case ( CKA_CERTIFICATE_TYPE ):
-            memcpy( &pxCertificateType, pxAttribute->pValue, sizeof( CK_CERTIFICATE_TYPE ) );
+            memcpy( pxCertificateType, pxAttribute->pValue, sizeof( CK_CERTIFICATE_TYPE ) );
 
-            if( pxCertificateType != CKC_X_509 )
+            if( *pxCertificateType != CKC_X_509 )
             {
                 xResult = CKR_ATTRIBUTE_VALUE_INVALID;
             }

@@ -1081,10 +1081,10 @@ CK_RV prvAddObjectToList( CK_OBJECT_HANDLE xPalHandle,
 }
 
 /**
- * @brief Save a DER formatted key in the PAL>
+ * @brief Save a DER formatted key in the PKCS #11 PAL.
  *
  */
-static CK_RV prvSaveDerKey( mbedtls_pk_context * pxMbedContext,
+static CK_RV prvSaveDerKeyToPal( mbedtls_pk_context * pxMbedContext,
                             CK_OBJECT_HANDLE_PTR pxObject,
                             CK_ATTRIBUTE_PTR pxLabel,
                             CK_KEY_TYPE xKeyType,
@@ -1094,7 +1094,7 @@ static CK_RV prvSaveDerKey( mbedtls_pk_context * pxMbedContext,
     CK_BYTE_PTR pxDerKey;
     int lDerKeyLength = 0;
     int lActualKeyLength = 0;
-    int compare = 0;
+    int lCompare = 0;
     CK_OBJECT_HANDLE xPalHandle = CK_INVALID_HANDLE;
 
     pxDerKey = pvPortMalloc( MAX_PUBLIC_KEY_SIZE );
@@ -1140,9 +1140,9 @@ static CK_RV prvSaveDerKey( mbedtls_pk_context * pxMbedContext,
          * It must be removed so that we can read the private
          * key back at a later time. */
         uint8_t emptyPubKey[ 6 ] = { 0xa1, 0x04, 0x03, 0x02, 0x00, 0x00 };
-        compare = memcmp( &pxDerKey[ MAX_LENGTH_KEY - 6 ], emptyPubKey, 6 );
+        lCompare = memcmp( &pxDerKey[ MAX_LENGTH_KEY - 6 ], emptyPubKey, 6 );
 
-        if( compare == 0 )
+        if( lCompare == 0 )
         {
             /* Do not write the last 6 bytes to key storage. */
             pxDerKey[ MAX_LENGTH_KEY - lDerKeyLength + 1 ] -= 6;
@@ -1971,11 +1971,12 @@ CK_RV prvGetExistingKeyComponent( CK_OBJECT_HANDLE_PTR pxPalHandle,
 }
 
 /**
- * @brief Helper function for importing elliptic curve public keys from
+ * @brief Helper function for importing elliptic curve keys from
  * template using C_CreateObject.
  * @param[in] pxTemplate templates to search for a key in.
  * @param[in] ulCount length of templates array.
  * @param[in] pxObject PKCS #11 object handle.
+ * @param[in] xIsPrivate boolean indicating whether the key is private or public.
  *
  */
 static CK_RV prvCreateECKey( CK_ATTRIBUTE_PTR pxTemplate,
@@ -2062,7 +2063,7 @@ static CK_RV prvCreateECKey( CK_ATTRIBUTE_PTR pxTemplate,
 
     if( xResult == CKR_OK )
     {
-        xResult = prvSaveDerKey( &xMbedContext,
+        xResult = prvSaveDerKeyToPal( &xMbedContext,
                                  pxObject,
                                  pxLabel,
                                  CKK_EC,
@@ -2130,7 +2131,7 @@ static CK_RV prvCreateRsaPrivateKey( CK_ATTRIBUTE_PTR pxTemplate,
 
     if( xResult == CKR_OK )
     {
-        xResult = prvSaveDerKey( &xMbedContext,
+        xResult = prvSaveDerKeyToPal( &xMbedContext,
                                  pxObject,
                                  pxLabel,
                                  CKK_RSA,

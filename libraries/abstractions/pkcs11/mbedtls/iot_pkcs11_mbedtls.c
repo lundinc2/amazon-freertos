@@ -1198,7 +1198,6 @@ static CK_RV prvSaveDerKeyToPal( mbedtls_pk_context * pxMbedContext,
         uint32_t ulObjectLength = 0;
         CK_BBOOL xIsPrivate = CK_TRUE;
         CK_RV xResult = CKR_OK;
-        CK_BBOOL xFreeMemory = CK_FALSE;
         CK_BYTE_PTR pxObject = NULL;
         CK_ATTRIBUTE xLabel = { 0 };
         CK_OBJECT_HANDLE xPalHandle;
@@ -1214,7 +1213,6 @@ static CK_RV prvSaveDerKeyToPal( mbedtls_pk_context * pxMbedContext,
 
             if( xResult == CKR_OK )
             {
-                xFreeMemory = CK_TRUE;
                 /* Some ports return a pointer to memory for which using memset directly won't work. */
                 pxZeroedData = pvPortMalloc( ulObjectLength );
 
@@ -1248,34 +1246,25 @@ static CK_RV prvSaveDerKeyToPal( mbedtls_pk_context * pxMbedContext,
             if( 0 == memcmp( xLabel.pValue, pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS, xLabelLength ) )
             {
                 prvFindObjectInListByLabel( ( uint8_t * ) pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS, strlen( ( char * ) pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS ), &xPalHandle, &xAppHandle2 );
-
-                if( xPalHandle != CK_INVALID_HANDLE )
-                {
-                    xResult = prvDeleteObjectFromList( xAppHandle2 );
-                }
             }
             else if( 0 == memcmp( xLabel.pValue, pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS, xLabelLength ) )
             {
                 prvFindObjectInListByLabel( ( uint8_t * ) pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS, strlen( ( char * ) pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS ), &xPalHandle, &xAppHandle2 );
-
-                if( xPalHandle != CK_INVALID_HANDLE )
-                {
-                    xResult = prvDeleteObjectFromList( xAppHandle2 );
-                }
             }
 
             if( xResult != CKR_OK )
             {
                 PKCS11_PRINT( ( "Error cleaning up PAL Handle 2. \r\n, %d", xResult ) );
             }
+            else if( xPalHandle != CK_INVALID_HANDLE )
+            {
+                xResult = prvDeleteObjectFromList( xAppHandle2 );
+            }
 
             xResult = prvDeleteObjectFromList( xAppHandle );
         }
 
-        if( xFreeMemory == CK_TRUE )
-        {
-            PKCS11_PAL_GetObjectValueCleanup( pxObject, ulObjectLength );
-        }
+        PKCS11_PAL_GetObjectValueCleanup( pxObject, ulObjectLength );
 
         return xResult;
     }
@@ -2866,7 +2855,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_FindObjects )( CK_SESSION_HANDLE xSession,
     /* Clean up memory if there was an error finding the object. */
     if( xResult != CKR_OK )
     {
-        if( pxSession != NULL ) 
+        if( pxSession != NULL )
         {
             vPortFree( pxSession->pxFindObjectLabel );
             pxSession->pxFindObjectLabel = NULL;
@@ -3848,7 +3837,7 @@ CK_RV prvCheckGenerateKeyPairPrivateTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
                 break;
 
             default:
-                xResult = CKR_TEMPLATE_INCONSISTENT;
+                xResult = CKR_ATTRIBUTE_TYPE_INVALID;
                 break;
         }
     }

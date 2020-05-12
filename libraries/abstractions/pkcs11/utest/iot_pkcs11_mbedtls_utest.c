@@ -923,10 +923,7 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
     pvPortMalloc_Stub( pvPkcs11MallocCb );
     PKCS11_PAL_FindObject_IgnoreAndReturn( 1 );
     PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
-    mbedtls_pk_parse_key_IgnoreAndReturn( 1 );
-    vLoggingPrintf_CMockIgnore();
-    mbedtls_strerror_highlevel_IgnoreAndReturn( NULL );
-    mbedtls_strerror_lowlevel_IgnoreAndReturn( NULL );
+    mbedtls_pk_parse_key_IgnoreAndReturn( 0 );
     PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
     pvPortMalloc_IgnoreAndReturn( &xKeyContext );
     mbedtls_ecp_keypair_init_CMockIgnore();
@@ -948,11 +945,71 @@ void test_pkcs11_C_CreateObjectECPrivKey( void )
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     prvCommonDeinitStubs();
+}
 
-    /* TODO: Remove this. Currently memory is malloc'd by PKCS #11 and free'd in the
-     * MbedTLS stack, but those functions are stubbed out. Need to update this test case
-     * to have a memory life cycle that is properly mocked. */
-    usMallocFreeCalls--;
+/*
+ *!
+ * @brief C_CreateObject Creating an EC private key attribute failures.
+ *
+ */
+void test_pkcs11_C_CreateObjectECPrivKeyBadAtt( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_KEY_TYPE xPrivateKeyType = CKK_EC;
+    CK_OBJECT_CLASS xPrivateKeyClass = CKO_PRIVATE_KEY;
+    CK_BBOOL xTrue = CK_TRUE;
+    CK_BBOOL xFalse = CK_FALSE;
+    char * pucPrivLabel = pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS;
+    /* DER-encoding of an ANSI X9.62 Parameters value */
+    CK_BYTE * pxEcPrivParams = ( CK_BYTE * ) ( "\x06\x08" MBEDTLS_OID_EC_GRP_SECP256R1 );
+    CK_OBJECT_HANDLE xObject = 0;
+
+    /* Private value D. */
+    CK_BYTE pxD[ EC_D_LENGTH ] = { 0 };
+
+    CK_ATTRIBUTE xPrivateKeyTemplate[] = EC_PRIV_KEY_INITIALIZER;
+    xPrivateKeyTemplate[5].type = CKA_MODULUS;
+
+    prvCommonInitStubs();
+
+    mbedtls_pk_init_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    PKCS11_PAL_FindObject_IgnoreAndReturn( 1 );
+    PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
+    mbedtls_pk_parse_key_IgnoreAndReturn( 0 );
+    PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
+    vLoggingPrintf_CMockIgnore();
+    mbedtls_pk_free_CMockIgnore();
+    vPortFree_Stub( vPkcs11FreeCb );
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_TYPE_INVALID, xResult );
+
+    xPrivateKeyTemplate[4].pValue = &xFalse;
+    xPrivateKeyTemplate[5].type = CKA_EC_PARAMS;
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_VALUE_INVALID, xResult );
+
+    xPrivateKeyTemplate[4].pValue = &xTrue;
+    mbedtls_mpi_read_binary_IgnoreAndReturn( -1 );
+    mbedtls_strerror_highlevel_IgnoreAndReturn(NULL);
+    mbedtls_strerror_lowlevel_IgnoreAndReturn(NULL);
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_FUNCTION_FAILED, xResult );
+
+    prvCommonDeinitStubs();
 }
 
 /*!
@@ -1054,6 +1111,69 @@ void test_pkcs11_C_CreateObjectRSAPrivKey( void )
      * MbedTLS stack, but those functions are stubbed out. Need to update this test case
      * to have a memory life cycle that is properly mocked. */
     usMallocFreeCalls--;
+}
+
+/*
+ *!
+ * @brief C_CreateObject Creating an RSA private key attribute failures.
+ *
+ */
+void test_pkcs11_C_CreateObjectRSAPrivKeyBadAtt( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_KEY_TYPE xPrivateKeyType = CKK_RSA;
+    CK_OBJECT_CLASS xPrivateKeyClass = CKO_PRIVATE_KEY;
+    CK_BBOOL xTrue = CK_TRUE;
+    char * pucLabel = pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS;
+    CK_OBJECT_HANDLE xObject = 0;
+
+    RsaParams_t xRsaParams = { 0 };
+
+    prvCommonInitStubs();
+
+    CK_ATTRIBUTE xPrivateKeyTemplate[] = RSA_PRIV_KEY_INITIALIZER;
+    xPrivateKeyTemplate[4].type = CKA_EC_POINT;
+
+    mbedtls_pk_init_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    mbedtls_rsa_init_CMockIgnore();
+    mbedtls_pk_free_CMockIgnore();
+    vPortFree_Stub( vPkcs11FreeCb );
+    vLoggingPrintf_CMockIgnore();
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_TYPE_INVALID, xResult );
+
+    xTrue = CK_FALSE;
+    xPrivateKeyTemplate[4].type = CKA_SIGN;
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_VALUE_INVALID, xResult );
+
+    xTrue = CK_TRUE;
+    mbedtls_rsa_import_raw_IgnoreAndReturn( 1 );
+    mbedtls_strerror_highlevel_IgnoreAndReturn(NULL);
+    mbedtls_strerror_lowlevel_IgnoreAndReturn(NULL);
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_FUNCTION_FAILED, xResult );
+
+    prvCommonDeinitStubs();
+
+    /* TODO: Remove this. Currently memory is malloc'd by PKCS #11 and free'd in the
+     * MbedTLS stack, but those functions are stubbed out. Need to update this test case
+     * to have a memory life cycle that is properly mocked. */
+    usMallocFreeCalls -= 3;
 }
 
 /*
@@ -1221,7 +1341,7 @@ void test_pkcs11_C_CreateObjectCertificateUnkownAtt( void )
                               ( CK_ATTRIBUTE_PTR ) &xCertificateTemplate,
                               sizeof( xCertificateTemplate ) / sizeof( CK_ATTRIBUTE ),
                               &xObject );
-    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCONSISTENT, xResult );
+    TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_TYPE_INVALID, xResult );
 
     prvCommonDeinitStubs();
 }
@@ -1771,7 +1891,7 @@ void test_pkcs11_C_VerifyInitECDSA( void )
     xMechanism.mechanism = CKM_ECDSA;
     CK_BBOOL xIsPrivate = CK_FALSE;
 
-    prvCommonDeinitStubs();
+    prvCommonInitStubs();
 
     xResult = prvCreateEcPub( &xSession, &xObject );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );

@@ -107,6 +107,7 @@
         { CKA_TOKEN, &xTrue, sizeof( CK_BBOOL ) },                                 \
         { CKA_SIGN, &xTrue, sizeof( CK_BBOOL ) },                                  \
         { CKA_MODULUS, xRsaParams.modulus + 1, MODULUS_LENGTH },                   \
+        { CKA_PRIVATE_EXPONENT, xRsaParams.d + 1, D_LENGTH },                    \
         { CKA_PUBLIC_EXPONENT, xRsaParams.e + 1, E_LENGTH },                       \
         { CKA_PRIME_1, xRsaParams.prime1 + 1, PRIME_1_LENGTH },                    \
         { CKA_PRIME_2, xRsaParams.prime2 + 1, PRIME_2_LENGTH },                    \
@@ -195,6 +196,18 @@ int suiteTearDown( int numFailures )
 
 /* ==========================  Helper functions  ============================ */
 
+#define prvCommonInitStubs() \
+    xResult = prvInitializePkcs11(); \
+    TEST_ASSERT_EQUAL( CKR_OK, xResult ); \
+    xResult = prvOpenSession( &xSession ); \
+    TEST_ASSERT_EQUAL( CKR_OK, xResult )
+
+#define prvCommonDeinitStubs() \
+    xResult = prvCloseSession( &xSession ); \
+    TEST_ASSERT_EQUAL( CKR_OK, xResult ); \
+    xResult = prvUninitializePkcs11(); \
+    TEST_ASSERT_EQUAL( CKR_OK, xResult )
+
 /*!
  * @brief Helper function to initialize PKCS #11.
  *
@@ -239,7 +252,7 @@ static CK_RV prvOpenSession( CK_SESSION_HANDLE_PTR pxSession )
     CK_FLAGS xFlags = CKF_SERIAL_SESSION | CKF_RW_SESSION;
 
     pvPortMalloc_Stub( pvPkcs11MallocCb );
-    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &xResult );
+    xQueueCreateMutex_IgnoreAndReturn( ( SemaphoreHandle_t ) &pxSession );
     xResult = C_OpenSession( 0, xFlags, NULL, 0, pxSession );
 
     return xResult;
@@ -1153,6 +1166,133 @@ void test_pkcs11_C_CreateObjectCertificate( void )
     xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 }
+
+/*
+ *!
+ * @brief C_CreateObject Bad Certificate type.
+ *
+ */
+void test_pkcs11_C_CreateObjectCertificateBadType( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_OBJECT_HANDLE xObject = 0;
+    CK_OBJECT_CLASS xCertificateClass = CKO_CERTIFICATE;
+    CK_CERTIFICATE_TYPE xCertificateType = -1;
+    CK_BBOOL xTokenStorage = CK_TRUE;
+    CK_BYTE xSubject[] = "TestSubject";
+    CK_BYTE xCert[] = "Empty Cert";
+    char * pucLabel = pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS;
+
+    PKCS11_CertificateTemplate_t xCertificateTemplate = CERT_INITIALIZER;
+
+    xResult = prvInitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
+    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
+    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    vLoggingPrintf_CMockIgnore();
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xCertificateTemplate,
+                              sizeof( xCertificateTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+    TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_VALUE_INVALID, xResult );
+
+    xResult = prvCloseSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+
+/*
+ *!
+ * @brief C_CreateObject Bad Certificate token value.
+ *
+ */
+void test_pkcs11_C_CreateObjectCertificateBadToken( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_OBJECT_HANDLE xObject = 0;
+    CK_OBJECT_CLASS xCertificateClass = CKO_CERTIFICATE;
+    CK_CERTIFICATE_TYPE xCertificateType = CKC_X_509;
+    CK_BBOOL xTokenStorage = CK_FALSE;
+    CK_BYTE xSubject[] = "TestSubject";
+    CK_BYTE xCert[] = "Empty Cert";
+    char * pucLabel = pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS;
+
+    PKCS11_CertificateTemplate_t xCertificateTemplate = CERT_INITIALIZER;
+
+    xResult = prvInitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
+    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
+    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    vLoggingPrintf_CMockIgnore();
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xCertificateTemplate,
+                              sizeof( xCertificateTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+    TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_VALUE_INVALID, xResult );
+
+    xResult = prvCloseSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+
+/*
+ *!
+ * @brief C_CreateObject Unknown Certificate Attribute.
+ *
+ */
+void test_pkcs11_C_CreateObjectCertificateUnkownAtt( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_OBJECT_HANDLE xObject = 0;
+    CK_OBJECT_CLASS xCertificateClass = CKO_CERTIFICATE;
+    CK_CERTIFICATE_TYPE xCertificateType = CKC_X_509;
+    CK_BBOOL xTokenStorage = CK_TRUE;
+    CK_BYTE xSubject[] = "TestSubject";
+    CK_BYTE xCert[] = "Empty Cert";
+    char * pucLabel = pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS;
+
+    PKCS11_CertificateTemplate_t xCertificateTemplate = CERT_INITIALIZER;
+    xCertificateTemplate.xSubject.type = CKA_MODULUS;
+
+    xResult = prvInitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvOpenSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    PKCS11_PAL_SaveObject_IgnoreAndReturn( 1 );
+    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
+    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    vLoggingPrintf_CMockIgnore();
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xCertificateTemplate,
+                              sizeof( xCertificateTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCONSISTENT, xResult );
+
+    xResult = prvCloseSession( &xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
 /* ======================  TESTING C_GetAttributeValue  ============================ */
 
 /*!
@@ -1324,7 +1464,11 @@ void test_pkcs11_C_FindObjectsInit( void )
     xResult = C_FindObjectsInit( xSession, ( CK_ATTRIBUTE_PTR ) &xFindTemplate, ulCount );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
+    /* Clean up after C_FindObjectsInit. */
     vPortFree_Stub( vPkcs11FreeCb );
+    xResult = C_FindObjectsFinal( xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
     xResult = prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
@@ -1358,17 +1502,21 @@ void test_pkcs11_C_FindObjects( void )
     xResult = prvCreateCert( &xSession, &xObject );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    pvPortMalloc_Stub( pvPkcs11MallocCb );
     xResult = C_FindObjectsInit( xSession, ( CK_ATTRIBUTE_PTR ) &xFindTemplate, ulCount );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     PKCS11_PAL_FindObject_IgnoreAndReturn( 1 );
     PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
     PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
+
     xResult = C_FindObjects( xSession, ( CK_OBJECT_HANDLE_PTR ) &xObject, 1, &ulFoundCount );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
+    /* Clean up after C_FindObjectsInit. */
     vPortFree_Stub( vPkcs11FreeCb );
+    xResult = C_FindObjectsFinal( xSession );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
     xResult = prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
@@ -1618,6 +1766,7 @@ void test_pkcs11_PKCS11_PAL_DestroyObjectMemFail( void )
 
     PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
     pvPortMalloc_IgnoreAndReturn( NULL );
+    vPortFree_CMockIgnore();
     xResult = PKCS11_PAL_DestroyObject( xObject );
     TEST_ASSERT_EQUAL( CKR_HOST_MEMORY, xResult );
 
@@ -1758,6 +1907,8 @@ void test_pkcs11_C_SignECDSA( void )
     CK_RV xResult = CKR_OK;
     CK_SESSION_HANDLE xSession = 0;
     CK_MECHANISM xMechanism = { 0 };
+    mbedtls_pk_context xSignAndVerifyKey;
+    xSignAndVerifyKey.pk_ctx = &xResult;
 
     xMechanism.mechanism = CKM_ECDSA;
     CK_OBJECT_HANDLE xKey = 0;
@@ -1785,6 +1936,7 @@ void test_pkcs11_C_SignECDSA( void )
 
     xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
     mbedtls_pk_sign_IgnoreAndReturn( 0 );
+    mbedtls_pk_sign_ReturnThruPtr_ctx( &xSignAndVerifyKey );
     xQueueGenericSend_IgnoreAndReturn( pdTRUE );
     PKI_mbedTLSSignatureToPkcs11Signature_IgnoreAndReturn( 0 );
     xResult = C_Sign( xSession, pxDummyData, ulDummyDataLen, pxDummySignature, &ulDummySignatureLen );

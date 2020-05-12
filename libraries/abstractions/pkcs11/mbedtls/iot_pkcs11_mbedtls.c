@@ -3782,23 +3782,11 @@ CK_RV prvCheckGenerateKeyPairPrivateTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
     for( xIndex = 0; xIndex < ulTemplateLength; xIndex++ )
     {
         xAttribute = pxTemplate[ xIndex ];
-
         switch( xAttribute.type )
         {
             case ( CKA_LABEL ):
                 *ppxLabel = &pxTemplate[ xIndex ];
                 xAttributeMap |= LABEL_IN_TEMPLATE;
-                break;
-
-            case ( CKA_TOKEN ):
-                memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
-
-                if( xBool != CK_TRUE )
-                {
-                    PKCS11_PRINT( ( "ERROR: Only token key generation is supported. \r\n" ) );
-                    xResult = CKR_ATTRIBUTE_VALUE_INVALID;
-                }
-
                 break;
 
             case ( CKA_KEY_TYPE ):
@@ -3809,31 +3797,28 @@ CK_RV prvCheckGenerateKeyPairPrivateTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
                     PKCS11_PRINT( ( "ERROR: Only EC key pair generation is supported. \r\n" ) );
                     xResult = CKR_TEMPLATE_INCONSISTENT;
                 }
-
                 break;
+            case ( CKA_SIGN ):
+                 memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
+
+                 if( xBool != CK_TRUE )
+                 {
+                     PKCS11_PRINT( ( "ERROR: Generating private keys that cannot sign is not supported. \r\n" ) );
+                     xResult = CKR_TEMPLATE_INCONSISTENT;
+                 }
+                 xAttributeMap |= SIGN_IN_TEMPLATE;
+                 break;
 
             case ( CKA_PRIVATE ):
-                memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
-
-                if( xBool != CK_TRUE )
-                {
-                    PKCS11_PRINT( ( "ERROR: Generating private keys that are not marked private is not supported. \r\n" ) );
-                    xResult = CKR_TEMPLATE_INCONSISTENT;
-                }
-
                 xAttributeMap |= PRIVATE_IN_TEMPLATE;
-                break;
-
-            case ( CKA_SIGN ):
+            case ( CKA_TOKEN ):
                 memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
 
                 if( xBool != CK_TRUE )
                 {
-                    PKCS11_PRINT( ( "ERROR: Generating private keys that cannot sign is not supported. \r\n" ) );
+                    PKCS11_PRINT( ( "ERROR: Generating private keys that are false for attribute %s is not supported. \r\n", xAttribute.type ) );
                     xResult = CKR_TEMPLATE_INCONSISTENT;
                 }
-
-                xAttributeMap |= SIGN_IN_TEMPLATE;
                 break;
 
             default:
@@ -3873,12 +3858,10 @@ CK_RV prvCheckGenerateKeyPairPublicTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
     int lCompare;
     CK_ULONG ulIndex;
     uint32_t xAttributeMap = 0;
-    uint32_t xRequiredAttributeMap = ( LABEL_IN_TEMPLATE | EC_PARAMS_IN_TEMPLATE | VERIFY_IN_TEMPLATE );
 
     for( ulIndex = 0; ulIndex < ulTemplateLength; ulIndex++ )
     {
         xAttribute = pxTemplate[ ulIndex ];
-
         switch( xAttribute.type )
         {
             case ( CKA_LABEL ):
@@ -3911,26 +3894,15 @@ CK_RV prvCheckGenerateKeyPairPublicTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
                 break;
 
             case ( CKA_VERIFY ):
-                memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
-
-                if( xBool != CK_TRUE )
-                {
-                    PKCS11_PRINT( ( "ERROR: Generating public keys that cannot verify is not supported. \r\n" ) );
-                    xResult = CKR_TEMPLATE_INCONSISTENT;
-                }
-
                 xAttributeMap |= VERIFY_IN_TEMPLATE;
-                break;
-
             case ( CKA_TOKEN ):
                 memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
 
                 if( xBool != CK_TRUE )
                 {
-                    PKCS11_PRINT( ( "ERROR: Only token key generation is supported. \r\n" ) );
-                    xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+                    PKCS11_PRINT( ( "ERROR: Generating private keys that are false for attribute %s is not supported. \r\n", xAttribute.type ) );
+                    xResult = CKR_TEMPLATE_INCONSISTENT;
                 }
-
                 break;
 
             default:

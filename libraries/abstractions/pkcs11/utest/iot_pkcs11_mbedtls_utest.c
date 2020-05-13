@@ -200,7 +200,7 @@ int suiteTearDown( int numFailures )
     xResult = prvInitializePkcs11(); \
     TEST_ASSERT_EQUAL( CKR_OK, xResult ); \
     xResult = prvOpenSession( &xSession ); \
-    TEST_ASSERT_EQUAL( CKR_OK, xResult )
+    TEST_ASSERT_EQUAL( CKR_OK, xResult ); \
 
 #define prvCommonDeinitStubs() \
     xResult = prvCloseSession( &xSession ); \
@@ -1007,7 +1007,21 @@ void test_pkcs11_C_CreateObjectECPrivKeyBadAtt( void )
                               sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                               &xObject );
 
-    TEST_ASSERT_EQUAL( CKR_FUNCTION_FAILED, xResult );
+    xPrivateKeyTemplate[3].pValue = &xFalse;
+    mbedtls_mpi_read_binary_IgnoreAndReturn( 0 );
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    xPrivateKeyTemplate[3].pValue = &xTrue;
+    xPrivateKeyTemplate[5].pValue = &pucPrivLabel;
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPrivateKeyTemplate,
+                              sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCONSISTENT, xResult );
 
     prvCommonDeinitStubs();
 }
@@ -1443,7 +1457,7 @@ void test_pkcs11_C_GetAttributeValueCert( void )
 }
 
 /*!
- * @brief C_GetAttributeValue EC Params
+ * @brief C_GetAttributeValue All Attributes
  *
  */
 void test_pkcs11_C_GetAttributeValueEcParams( void )
@@ -1456,6 +1470,8 @@ void test_pkcs11_C_GetAttributeValueEcParams( void )
     uint8_t pulBuf[ sizeof( pulKnownBuf ) ] = { 0 };
     uint8_t ulPoint = 0;
     uint8_t ulKnownPoint = 0x04;
+    CK_OBJECT_CLASS xPrivateKeyClass = { 0 };
+    CK_OBJECT_CLASS xKnownPrivateKeyClass = CKO_PRIVATE_KEY;
     CK_ATTRIBUTE xTemplate = { CKA_EC_PARAMS, pulBuf, sizeof( pulBuf ) };
 
     prvCommonInitStubs();
@@ -1463,7 +1479,8 @@ void test_pkcs11_C_GetAttributeValueEcParams( void )
     xResult = prvCreateEcPriv( &xSession, &xObject );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
-    /* Get Certificate value. */
+
+    /* EC Params Case */
     PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
     mbedtls_pk_init_CMockIgnore();
     mbedtls_pk_parse_key_IgnoreAndReturn( 1 );
@@ -1474,13 +1491,37 @@ void test_pkcs11_C_GetAttributeValueEcParams( void )
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
     TEST_ASSERT_EQUAL_MEMORY( pulKnownBuf, xTemplate.pValue, sizeof( pulKnownBuf ) );
 
-    mbedtls_ecp_tls_write_point_IgnoreAndReturn( 1 );
+    /* EC Point Case */
     xTemplate.type = CKA_EC_POINT;
     xTemplate.pValue = &ulPoint;
     xTemplate.ulValueLen = sizeof( ulPoint );
+    
+    mbedtls_ecp_tls_write_point_IgnoreAndReturn( 1 );
     xResult = C_GetAttributeValue( xSession, xObject, ( CK_ATTRIBUTE_PTR ) &xTemplate, ulCount );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
     TEST_ASSERT_EQUAL( ulKnownPoint, ulPoint );
+
+    xResult = C_GetAttributeValue( xSession, xObject, ( CK_ATTRIBUTE_PTR ) &xTemplate, ulCount );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( ulKnownPoint, ulPoint );
+
+    /* CKA Class Case */
+    xTemplate.type = CKA_CLASS;
+    xTemplate.pValue = NULL;
+    xTemplate.ulValueLen = 0;
+
+    mbedtls_pk_parse_key_IgnoreAndReturn( 0 );
+    xResult = C_GetAttributeValue( xSession, xObject, ( CK_ATTRIBUTE_PTR ) &xTemplate, ulCount );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( NULL, xTemplate.pValue );
+    TEST_ASSERT_EQUAL( sizeof( xPrivateKeyClass ), xTemplate.ulValueLen );
+
+    xTemplate.pValue = &xPrivateKeyClass;
+
+    xResult = C_GetAttributeValue( xSession, xObject, ( CK_ATTRIBUTE_PTR ) &xTemplate, ulCount );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( sizeof( xPrivateKeyClass ), xTemplate.ulValueLen );
+    TEST_ASSERT_EQUAL_MEMORY( &xKnownPrivateKeyClass, xTemplate.pValue, sizeof( xPrivateKeyClass ) );
 
     prvCommonDeinitStubs();
 }
@@ -2082,6 +2123,7 @@ void test_pkcs11_C_GenerateKeyPairECDSA( void )
 
     prvCommonDeinitStubs();
 }
+
 /* ======================  TESTING C_GenerateRandom  ============================ */
 
 /*!
@@ -2124,3 +2166,37 @@ void test_pkcs11_C_GenerateRandomDrbgFail( void )
     
     prvCommonDeinitStubs();
 }
+
+/* ======================  TESTING C_DestroyObject  ============================ */
+
+/*!
+ * @brief C_GenerateRandom happy path.
+ *
+ */
+void test_pkcs11_C_DestroyObject( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_OBJECT_HANDLE xObject = 0;
+
+    prvCommonInitStubs();
+
+    xResult = prvCreateEcPub( &xSession, &xObject );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvCreateEcPriv( &xSession, &xObject );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    vPortFree_Stub( vPkcs11FreeCb );
+    PKCS11_PAL_SaveObject_IgnoreAndReturn( 2 );
+    xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
+    xQueueGenericSend_IgnoreAndReturn( pdTRUE );
+    PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
+    xResult = C_DestroyObject( xSession, xObject );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    prvCommonDeinitStubs();
+}
+

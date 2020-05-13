@@ -299,7 +299,7 @@ CK_RV xInitializePkcs11Token( void );
  */
 /* @[declare_pkcs11_iot_xfindobjectwithlabelandclass] */
 CK_RV xFindObjectWithLabelAndClass( CK_SESSION_HANDLE xSession,
-                                    const char * pcLabelName,
+                                    char * pcLabelName,
                                     CK_OBJECT_CLASS xClass,
                                     CK_OBJECT_HANDLE_PTR pxHandle );
 /* @[declare_pkcs11_iot_xfindobjectwithlabelandclass] */
@@ -324,7 +324,7 @@ CK_RV xFindObjectWithLabelAndClass( CK_SESSION_HANDLE xSession,
  *
  */
 /* @[declare_pkcs11_iot_vappendsha256algorithmidentifiersequence] */
-CK_RV vAppendSHA256AlgorithmIdentifierSequence( uint8_t * puc32ByteHashedMessage,
+CK_RV vAppendSHA256AlgorithmIdentifierSequence( const uint8_t * puc32ByteHashedMessage,
                                                 uint8_t * puc51ByteHashOidBuffer );
 /* @[declare_pkcs11_iot_vappendsha256algorithmidentifiersequence] */
 

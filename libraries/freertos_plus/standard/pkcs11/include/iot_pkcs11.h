@@ -186,7 +186,7 @@ typedef struct PKCS11_CertificateTemplate
     CK_ATTRIBUTE xValue;           /**< @brief CKA_VALUE, the DER byte array of the certificate contents. */
     CK_ATTRIBUTE xLabel;           /**< @brief CKA_LABEL. */
     CK_ATTRIBUTE xTokenObject;     /**< @brief CKA_TOKEN. */
-} PKCS11_CertificateTemplate_t, * PKCS11_CertificateTemplatePtr_t;
+} PKCS11_CertificateTemplate_t;
 
 /*------------------------ PKCS #11 wrapper functions -------------------------*/
 

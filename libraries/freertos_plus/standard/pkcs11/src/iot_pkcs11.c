@@ -348,8 +348,8 @@ CK_RV vAppendSHA256AlgorithmIdentifierSequence( uint8_t * puc32ByteHashedMessage
 
     if( xResult == CKR_OK )
     {
-        memcpy( puc51ByteHashOidBuffer, pucOidSequence, sizeof( pucOidSequence ) );
-        memcpy( &puc51ByteHashOidBuffer[ sizeof( pucOidSequence ) ], puc32ByteHashedMessage, 32 );
+        ( void ) memcpy( puc51ByteHashOidBuffer, pucOidSequence, sizeof( pucOidSequence ) );
+        ( void ) memcpy( &puc51ByteHashOidBuffer[ sizeof( pucOidSequence ) ], puc32ByteHashedMessage, 32 );
     }
 
     return xResult;

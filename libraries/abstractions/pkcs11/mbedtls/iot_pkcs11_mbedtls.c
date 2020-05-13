@@ -1200,9 +1200,9 @@ static CK_RV prvSaveDerKeyToPal( mbedtls_pk_context * pxMbedContext,
         CK_RV xResult = CKR_OK;
         CK_BYTE_PTR pxObject = NULL;
         CK_ATTRIBUTE xLabel = { 0 };
-        CK_OBJECT_HANDLE xPalHandle;
-        CK_OBJECT_HANDLE xPalHandle2;
-        CK_OBJECT_HANDLE xAppHandle2;
+        CK_OBJECT_HANDLE xPalHandle = CK_INVALID_HANDLE;
+        CK_OBJECT_HANDLE xPalHandle2 = CK_INVALID_HANDLE;
+        CK_OBJECT_HANDLE xAppHandle2 = CK_INVALID_HANDLE;
         CK_BYTE_PTR pxZeroedData = NULL;
 
         prvFindObjectInListByHandle( xAppHandle, &xPalHandle, &pcLabel, &xLabelLength );
@@ -1252,11 +1252,7 @@ static CK_RV prvSaveDerKeyToPal( mbedtls_pk_context * pxMbedContext,
                 prvFindObjectInListByLabel( ( uint8_t * ) pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS, strlen( ( char * ) pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS ), &xPalHandle, &xAppHandle2 );
             }
 
-            if( xResult != CKR_OK )
-            {
-                PKCS11_PRINT( ( "Error cleaning up PAL Handle 2. \r\n, %d", xResult ) );
-            }
-            else if( xPalHandle != CK_INVALID_HANDLE )
+            if( xPalHandle != CK_INVALID_HANDLE )
             {
                 xResult = prvDeleteObjectFromList( xAppHandle2 );
             }
@@ -3318,7 +3314,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE xSession,
  */
 /* @[declare_pkcs11_mbedtls_c_sign] */
 CK_DECLARE_FUNCTION( CK_RV, C_Sign )( CK_SESSION_HANDLE xSession,
-                                      CK_BYTE_PTR pucData,
+                                      const CK_BYTE_PTR pucData,
                                       CK_ULONG ulDataLen,
                                       CK_BYTE_PTR pucSignature,
                                       CK_ULONG_PTR pulSignatureLen )
@@ -3782,6 +3778,11 @@ CK_RV prvCheckGenerateKeyPairPrivateTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
     for( xIndex = 0; xIndex < ulTemplateLength; xIndex++ )
     {
         xAttribute = pxTemplate[ xIndex ];
+        if( xResult != CKR_OK )
+        {
+            break;
+        }
+
         switch( xAttribute.type )
         {
             case ( CKA_LABEL ):
@@ -3811,6 +3812,7 @@ CK_RV prvCheckGenerateKeyPairPrivateTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
 
             case ( CKA_PRIVATE ):
                 xAttributeMap |= PRIVATE_IN_TEMPLATE;
+                /* Fall through. */
             case ( CKA_TOKEN ):
                 memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
 
@@ -3858,6 +3860,7 @@ CK_RV prvCheckGenerateKeyPairPublicTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
     int lCompare;
     CK_ULONG ulIndex;
     uint32_t xAttributeMap = 0;
+    uint32_t xRequiredAttributeMap = ( LABEL_IN_TEMPLATE | EC_PARAMS_IN_TEMPLATE | VERIFY_IN_TEMPLATE );
 
     for( ulIndex = 0; ulIndex < ulTemplateLength; ulIndex++ )
     {
@@ -3895,12 +3898,13 @@ CK_RV prvCheckGenerateKeyPairPublicTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
 
             case ( CKA_VERIFY ):
                 xAttributeMap |= VERIFY_IN_TEMPLATE;
+                /* Fall through. */
             case ( CKA_TOKEN ):
                 memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
 
                 if( xBool != CK_TRUE )
                 {
-                    PKCS11_PRINT( ( "ERROR: Generating private keys that are false for attribute %s is not supported. \r\n", xAttribute.type ) );
+                    PKCS11_PRINT( ( "ERROR: Generating private keys that are false for attribute %d is not supported. \r\n", xAttribute.type ) );
                     xResult = CKR_TEMPLATE_INCONSISTENT;
                 }
                 break;

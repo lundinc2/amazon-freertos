@@ -1068,6 +1068,71 @@ void test_pkcs11_C_CreateObjectECPubKey( void )
 
 /*
  *!
+ * @brief C_CreateObject Creating an EC public key attribute failures.
+ *
+ */
+void test_pkcs11_C_CreateObjectECPubKeyBadAtt( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_KEY_TYPE xPublicKeyType = CKK_EC;
+    CK_OBJECT_CLASS xPublicKeyClass = CKO_PUBLIC_KEY;
+    CK_BBOOL xTrue = CK_TRUE;
+    CK_BBOOL xFalse = CK_FALSE;
+    char * pucPubLabel = pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS;
+    size_t xLength = 256;
+    /* DER-encoding of an ANSI X9.62 Parameters value */
+    CK_BYTE pxEcPubParams[] = pkcs11DER_ENCODED_OID_P256;
+    CK_OBJECT_HANDLE xObject = 0;
+    CK_BYTE pxEcPoint[ 256 ] = { 0 };
+
+    CK_ATTRIBUTE xPublicKeyTemplate[] = EC_PUB_KEY_INITIALIZER;
+
+    prvCommonInitStubs();
+
+    xPublicKeyTemplate[5].type = CKA_MODULUS;
+
+    mbedtls_pk_init_CMockIgnore();
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    PKCS11_PAL_FindObject_IgnoreAndReturn( 1 );
+    PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
+    mbedtls_pk_parse_public_key_IgnoreAndReturn( 0 );
+    PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
+    vLoggingPrintf_CMockIgnore();
+    mbedtls_pk_free_CMockIgnore();
+    vPortFree_Stub( vPkcs11FreeCb );
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPublicKeyTemplate,
+                              sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_TYPE_INVALID, xResult );
+
+    xPublicKeyTemplate[3].pValue = &xFalse;
+    xPublicKeyTemplate[5].type = CKA_EC_POINT;
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPublicKeyTemplate,
+                              sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_ATTRIBUTE_VALUE_INVALID, xResult );
+
+    xPublicKeyTemplate[3].pValue = &xTrue;
+    mbedtls_ecp_point_read_binary_IgnoreAndReturn( -1 );
+    mbedtls_strerror_highlevel_IgnoreAndReturn(NULL);
+    mbedtls_strerror_lowlevel_IgnoreAndReturn(NULL);
+    xResult = C_CreateObject( xSession,
+                              ( CK_ATTRIBUTE_PTR ) &xPublicKeyTemplate,
+                              sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
+                              &xObject );
+
+    TEST_ASSERT_EQUAL( CKR_FUNCTION_FAILED, xResult );
+
+    prvCommonDeinitStubs();
+}
+
+/*
+ *!
  * @brief C_CreateObject Creating an RSA Private key happy path.
  *
  */
@@ -1662,19 +1727,15 @@ void test_pkcs11_PKCS11_PAL_DestroyObject( void )
     CK_SESSION_HANDLE xSession = 0;
     CK_OBJECT_HANDLE xObject = 0;
 
-    xResult = prvInitializePkcs11();
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    prvCommonInitStubs();
 
-    xResult = prvOpenSession( &xSession );
-    TEST_ASSERT_EQUAL( CKR_OK, xResult );
-
-    xResult = prvCreateCert( &xSession, &xObject );
+    xResult = prvCreateEcPriv( &xSession, &xObject );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
     pvPortMalloc_Stub( pvPkcs11MallocCb );
     vPortFree_Stub( vPkcs11FreeCb );
-    PKCS11_PAL_SaveObject_IgnoreAndReturn( 3 );
+    PKCS11_PAL_SaveObject_IgnoreAndReturn( 2 );
     xQueueSemaphoreTake_IgnoreAndReturn( pdTRUE );
     xQueueGenericSend_IgnoreAndReturn( pdTRUE );
     PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();

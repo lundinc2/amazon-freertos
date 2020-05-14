@@ -1849,6 +1849,48 @@ void test_pkcs11_C_FindObjectsInit( void )
     prvCommonDeinitStubs();
 }
 
+/*!
+ * @brief C_FindObjectsInit Bad args.
+ *
+ */
+void test_pkcs11_C_FindObjectsInitBadArgs( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_ULONG ulCount = 1;
+    CK_OBJECT_HANDLE xObject = 0;
+    char * pucLabel = pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS;
+
+    CK_ATTRIBUTE xFindTemplate = { CKA_LABEL, pucLabel, strlen( ( const char * ) pucLabel ) };
+
+    prvCommonInitStubs();
+
+    xResult = prvCreateCert( &xSession, &xObject );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    pvPortMalloc_Stub( pvPkcs11MallocCb );
+    vPortFree_Stub( vPkcs11FreeCb );
+    vLoggingPrintf_CMockIgnore();
+    xResult = C_FindObjectsInit( xSession, NULL, ulCount );
+    TEST_ASSERT_EQUAL( CKR_ARGUMENTS_BAD, xResult );
+
+    /* Free always gets called but this failure never malloc'd so we don't care. */
+    usMallocFreeCalls++;
+
+    xResult = C_FindObjectsInit( xSession, ( CK_ATTRIBUTE_PTR ) &xFindTemplate, -1 );
+    TEST_ASSERT_EQUAL( CKR_ARGUMENTS_BAD, xResult );
+
+    /* Free always gets called but this failure never malloc'd so we don't care. */
+    usMallocFreeCalls++;
+
+    /* Clean up after C_FindObjectsInit. */
+    xResult = C_FindObjectsFinal( xSession );
+    TEST_ASSERT_EQUAL( CKR_OPERATION_NOT_INITIALIZED, xResult );
+
+
+    prvCommonDeinitStubs();
+}
+
 /* ======================  TESTING C_FindObjects  ============================ */
 
 /*!
@@ -1862,6 +1904,9 @@ void test_pkcs11_C_FindObjects( void )
     CK_ULONG ulCount = 1;
     CK_ULONG ulFoundCount = 0;
     CK_OBJECT_HANDLE xObject = 0;
+    uint8_t pucBuf[] = { 1, 1, 1, 1 };
+    uint8_t * ppucBufPtr = ( uint8_t * ) &pucBuf;
+    uint32_t ulObjectLength = sizeof( pucBuf );
     char * pucLabel = pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS;
 
     CK_ATTRIBUTE xFindTemplate = { CKA_LABEL, pucLabel, strlen( ( const char * ) pucLabel ) };
@@ -1875,16 +1920,64 @@ void test_pkcs11_C_FindObjects( void )
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 
     PKCS11_PAL_FindObject_IgnoreAndReturn( 1 );
-    PKCS11_PAL_GetObjectValue_IgnoreAndReturn( CKR_OK );
+    PKCS11_PAL_GetObjectValue_ExpectAnyArgsAndReturn( CKR_OK );
+    PKCS11_PAL_GetObjectValue_ReturnThruPtr_ppucData( &ppucBufPtr );
+    PKCS11_PAL_GetObjectValue_ReturnThruPtr_pulDataSize( &ulObjectLength );
     PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
-
     xResult = C_FindObjects( xSession, ( CK_OBJECT_HANDLE_PTR ) &xObject, 1, &ulFoundCount );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( 1, ulFoundCount );
 
     /* Clean up after C_FindObjectsInit. */
     vPortFree_Stub( vPkcs11FreeCb );
     xResult = C_FindObjectsFinal( xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    prvCommonDeinitStubs();
+}
+
+/*!
+ * @brief C_FindObjects bad args.
+ *
+ */
+void test_pkcs11_C_FindObjectsBadArgs( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+    CK_ULONG ulCount = 1;
+    CK_ULONG ulFoundCount = 0;
+    CK_OBJECT_HANDLE xObject = 0;
+    char * pucLabel = pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS;
+    uint8_t pucBuf[] = { 0, 0, 0, 0 };
+    uint8_t * ppucBufPtr = ( uint8_t * ) &pucBuf;
+    uint32_t ulObjectLength = sizeof( pucBuf );
+
+    CK_ATTRIBUTE xFindTemplate = { CKA_LABEL, pucLabel, strlen( ( const char * ) pucLabel ) };
+
+    prvCommonInitStubs();
+
+    vPortFree_Stub( vPkcs11FreeCb );
+    xResult = C_FindObjects( xSession, ( CK_OBJECT_HANDLE_PTR ) &xObject, 1, &ulFoundCount );
+    TEST_ASSERT_EQUAL( CKR_OPERATION_NOT_INITIALIZED, xResult );
+
+    xResult = C_FindObjectsInit( xSession, ( CK_ATTRIBUTE_PTR ) &xFindTemplate, ulCount );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    PKCS11_PAL_FindObject_IgnoreAndReturn( CK_INVALID_HANDLE );
+    xResult = C_FindObjects( xSession, ( CK_OBJECT_HANDLE_PTR ) &xObject, 1, &ulFoundCount );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( 0, ulFoundCount );
+    
+    PKCS11_PAL_FindObject_IgnoreAndReturn( 1 );
+    PKCS11_PAL_GetObjectValue_ExpectAnyArgsAndReturn( CKR_OK );
+    PKCS11_PAL_GetObjectValue_ReturnThruPtr_ppucData( &ppucBufPtr );
+    PKCS11_PAL_GetObjectValue_ReturnThruPtr_pulDataSize( &ulObjectLength );
+    PKCS11_PAL_GetObjectValueCleanup_CMockIgnore();
+
+    xResult = C_FindObjects( xSession, ( CK_OBJECT_HANDLE_PTR ) &xObject, 1, &ulFoundCount );
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+    TEST_ASSERT_EQUAL( CK_INVALID_HANDLE, xObject );
+    TEST_ASSERT_EQUAL( 0, ulFoundCount );
 
     prvCommonDeinitStubs();
 }

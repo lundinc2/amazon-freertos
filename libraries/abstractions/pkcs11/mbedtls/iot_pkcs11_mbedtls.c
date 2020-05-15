@@ -490,7 +490,7 @@ CK_RV prvMbedTLS_Initialize( void )
     }
     else
     {
-        memset( &xP11Context, 0, sizeof( xP11Context ) );
+        ( void ) memset( &xP11Context, 0, sizeof( xP11Context ) );
         xP11Context.xObjectList.xMutex = xSemaphoreCreateMutex();
 
         if( xP11Context.xObjectList.xMutex == NULL )
@@ -904,6 +904,10 @@ static CK_RV prvEcKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
     {
         xResult = prvEcPubKeyAttParse( pxAttribute, pxMbedContext );
     }
+    else
+    {
+        /* Errors will be output in the statement below in order to catch all cases. */
+    }
 
     if( xResult != CKR_OK )
     {
@@ -1008,7 +1012,7 @@ static CK_RV prvDeleteObjectFromList( CK_OBJECT_HANDLE xAppHandle )
     {
         if( xP11Context.xObjectList.xObjects[ lIndex ].xHandle != CK_INVALID_HANDLE )
         {
-            memset( &xP11Context.xObjectList.xObjects[ lIndex ], 0, sizeof( P11Object_t ) );
+            ( void ) memset( &xP11Context.xObjectList.xObjects[ lIndex ], 0, sizeof( P11Object_t ) );
         }
         else
         {
@@ -1226,7 +1230,7 @@ static CK_RV prvSaveDerKeyToPal( mbedtls_pk_context * pxMbedContext,
                 if( NULL != pxZeroedData )
                 {
                     /* Zero out the object. */
-                    memset( pxZeroedData, 0x0, ulObjectLength );
+                    ( void ) memset( pxZeroedData, 0x0, ulObjectLength );
                     /* Create an object label attribute. */
                     xLabel.type = CKA_LABEL;
                     xLabel.pValue = pcLabel;
@@ -1261,6 +1265,10 @@ static CK_RV prvSaveDerKeyToPal( mbedtls_pk_context * pxMbedContext,
             else if( 0 == strcmp( xLabel.pValue, pkcs11configLABEL_DEVICE_PUBLIC_KEY_FOR_TLS ) )
             {
                 prvFindObjectInListByLabel( ( uint8_t * ) pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS, strlen( ( char * ) pkcs11configLABEL_DEVICE_PRIVATE_KEY_FOR_TLS ), &xPalHandle, &xAppHandle2 );
+            }
+            else
+            {
+                PKCS11_WARNING_PRINT( ( "Warning: Trying to destroy an object with an unknown label." ) );
             }
 
             if( xPalHandle != CK_INVALID_HANDLE )
@@ -1649,7 +1657,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID xSlotID,
          */
         if( CKR_OK == xResult )
         {
-            memset( pxSessionObj, 0, sizeof( P11Session_t ) );
+            ( void ) memset( pxSessionObj, 0, sizeof( P11Session_t ) );
             pxSessionObj->xSignMutex = xSemaphoreCreateMutex();
 
             if( NULL == pxSessionObj->xSignMutex )
@@ -2638,6 +2646,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_GetAttributeValue )( CK_SESSION_HANDLE xSession,
 
                 default:
                     xResult = CKR_ATTRIBUTE_TYPE_INVALID;
+                    break;
             }
         }
 
@@ -3711,7 +3720,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Verify )( CK_SESSION_HANDLE xSession,
                     }
                 }
 
-                xSemaphoreGive( pxSessionObj->xVerifyMutex );
+                ( void ) xSemaphoreGive( pxSessionObj->xVerifyMutex );
             }
             else
             {
@@ -3755,7 +3764,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Verify )( CK_SESSION_HANDLE xSession,
                         lMbedTLSResult = mbedtls_ecdsa_verify( &pxEcdsaContext->grp, pucData, ulDataLen, &pxEcdsaContext->Q, &xR, &xS );
                     }
 
-                    xSemaphoreGive( pxSessionObj->xVerifyMutex );
+                    ( void ) xSemaphoreGive( pxSessionObj->xVerifyMutex );
 
                     if( lMbedTLSResult != 0 )
                     {
@@ -3907,7 +3916,7 @@ static CK_RV prvCheckGenerateKeyPairPublicTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
 
         case ( CKA_EC_PARAMS ):
 
-            if( memcmp( xEcParams, pxAttribute->pValue, sizeof( xEcParams ) ) != 0 )
+            if( memcmp( xEcParams, ( void * ) pxAttribute->pValue, sizeof( xEcParams ) ) != 0 )
             {
                 PKCS11_PRINT( ( "ERROR: Only P-256 key generation is supported. \r\n" ) );
                 xResult = CKR_TEMPLATE_INCONSISTENT;
@@ -4154,7 +4163,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_GenerateKeyPair )( CK_SESSION_HANDLE xSession,
 
             if( xResult != CKR_OK )
             {
-                PKCS11_PAL_DestroyObject( *pxPrivateKey );
+                ( void ) PKCS11_PAL_DestroyObject( *pxPrivateKey );
             }
         }
     }

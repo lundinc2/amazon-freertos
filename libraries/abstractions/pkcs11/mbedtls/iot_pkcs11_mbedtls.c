@@ -57,7 +57,7 @@
 
 
 /**
- * @brief Default macro to supress EC operations to off.
+ * @brief Default macro to not suppress EC operations.
  *
  */
 #ifndef pkcs11configSUPPRESS_ECDSA_MECHANISM
@@ -1246,6 +1246,10 @@ static CK_RV prvSaveDerKeyToPal( mbedtls_pk_context * pxMbedContext,
                 vPortFree( pxZeroedData );
             }
         }
+        else
+        {
+            xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+        }
 
         if( xResult == CKR_OK )
         {
@@ -1261,6 +1265,11 @@ static CK_RV prvSaveDerKeyToPal( mbedtls_pk_context * pxMbedContext,
             if( xPalHandle != CK_INVALID_HANDLE )
             {
                 xResult = prvDeleteObjectFromList( xAppHandle2 );
+            }
+
+            if( xResult != CKR_OK )
+            {
+                PKCS11_PRINT( ( "ERROR: Failed to remove xAppHandle2 from object list when destroying object memory." ) );
             }
 
             xResult = prvDeleteObjectFromList( xAppHandle );
@@ -3783,75 +3792,68 @@ CK_DECLARE_FUNCTION( CK_RV, C_Verify )( CK_SESSION_HANDLE xSession,
  *
  * @param[out] ppxLabel                       Pointer to PKCS #11 label.
  * @param[in] pxTemplate                      PKCS #11 templates to search.
- * @param[in] ulTemplateLength                Length of template array.
- *
+ * @param[in] pulAttributeMap                 Flag to track whether all required attribute
+ *                                            are in the key generation template.
  * @return CKR_OK if successful.
  */
-CK_RV prvCheckGenerateKeyPairPrivateTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
-                                              CK_ATTRIBUTE_PTR pxTemplate,
-                                              CK_ULONG ulTemplateLength )
+static CK_RV prvCheckGenerateKeyPairPrivateTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
+                                             CK_ATTRIBUTE_PTR pxAttribute,
+                                             uint32_t * pulAttributeMap )
 {
-    CK_ATTRIBUTE xAttribute;
     CK_RV xResult = CKR_OK;
     CK_BBOOL xBool;
     CK_ULONG xTemp;
-    CK_ULONG xIndex;
-    uint32_t xAttributeMap = 0;
-    uint32_t xRequiredAttributeMap = ( LABEL_IN_TEMPLATE | PRIVATE_IN_TEMPLATE | SIGN_IN_TEMPLATE );
 
-    for( xIndex = 0; xIndex < ulTemplateLength && xResult == CKR_OK; xIndex++ )
+    switch( pxAttribute->type )
     {
-        xAttribute = pxTemplate[ xIndex ];
+        case ( CKA_LABEL ):
+            *ppxLabel = pxAttribute;
+            *pulAttributeMap |= LABEL_IN_TEMPLATE;
+            break;
 
-        switch( xAttribute.type )
-        {
-            case ( CKA_LABEL ):
-                *ppxLabel = &pxTemplate[ xIndex ];
-                xAttributeMap |= LABEL_IN_TEMPLATE;
-                break;
+        case ( CKA_KEY_TYPE ):
+            ( void ) memcpy( &xTemp, pxAttribute->pValue, sizeof( CK_ULONG ) );
 
-            case ( CKA_KEY_TYPE ):
-                ( void ) memcpy( &xTemp, xAttribute.pValue, sizeof( CK_ULONG ) );
+            if( xTemp != CKK_EC )
+            {
+                PKCS11_PRINT( ( "ERROR: Only EC key pair generation is supported. \r\n" ) );
+                xResult = CKR_TEMPLATE_INCONSISTENT;
+            }
+            break;
+        case ( CKA_SIGN ):
+             ( void ) memcpy( &xBool, pxAttribute->pValue, sizeof( CK_BBOOL ) );
 
-                if( xTemp != CKK_EC )
-                {
-                    PKCS11_PRINT( ( "ERROR: Only EC key pair generation is supported. \r\n" ) );
-                    xResult = CKR_TEMPLATE_INCONSISTENT;
-                }
-                break;
-            case ( CKA_SIGN ):
-                 ( void ) memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
+             if( xBool != CK_TRUE )
+             {
+                 PKCS11_PRINT( ( "ERROR: Generating private keys that cannot sign is not supported. \r\n" ) );
+                 xResult = CKR_TEMPLATE_INCONSISTENT;
+             }
+             *pulAttributeMap |= SIGN_IN_TEMPLATE;
+             break;
 
-                 if( xBool != CK_TRUE )
-                 {
-                     PKCS11_PRINT( ( "ERROR: Generating private keys that cannot sign is not supported. \r\n" ) );
-                     xResult = CKR_TEMPLATE_INCONSISTENT;
-                 }
-                 xAttributeMap |= SIGN_IN_TEMPLATE;
-                 break;
+        case ( CKA_PRIVATE ):
+            ( void ) memcpy( &xBool, pxAttribute->pValue, sizeof( CK_BBOOL ) );
 
-            case ( CKA_PRIVATE ):
-                xAttributeMap |= PRIVATE_IN_TEMPLATE;
-                /* Fall through. */
-            case ( CKA_TOKEN ):
-                ( void ) memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
+            if( xBool != CK_TRUE )
+            {
+                PKCS11_PRINT( ( "ERROR: Private must be set to true in order to generate a private key. \r\n" ) );
+                xResult = CKR_TEMPLATE_INCONSISTENT;
+            }
+            *pulAttributeMap |= PRIVATE_IN_TEMPLATE;
+            break;
+        case ( CKA_TOKEN ):
+            ( void ) memcpy( &xBool, pxAttribute->pValue, sizeof( CK_BBOOL ) );
 
-                if( xBool != CK_TRUE )
-                {
-                    PKCS11_PRINT( ( "ERROR: Generating private keys that are false for attribute %s is not supported. \r\n", xAttribute.type ) );
-                    xResult = CKR_TEMPLATE_INCONSISTENT;
-                }
-                break;
+            if( xBool != CK_TRUE )
+            {
+                PKCS11_PRINT( ( "ERROR: Generating private keys that are false for attribute CKA_TOKEN is not supported. \r\n" ) );
+                xResult = CKR_TEMPLATE_INCONSISTENT;
+            }
+            break;
 
-            default:
-                xResult = CKR_ATTRIBUTE_TYPE_INVALID;
-                break;
-        }
-    }
-
-    if( ( xAttributeMap & xRequiredAttributeMap ) != xRequiredAttributeMap )
-    {
-        xResult = CKR_TEMPLATE_INCOMPLETE;
+        default:
+            xResult = CKR_ATTRIBUTE_TYPE_INVALID;
+            break;
     }
 
     return xResult;
@@ -3864,74 +3866,60 @@ CK_RV prvCheckGenerateKeyPairPrivateTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
  *
  * @param[out] ppxLabel                       Pointer to PKCS #11 label.
  * @param[in] pxTemplate                      PKCS #11 templates to search.
- * @param[in] ulTemplateLength                Length of template array.
+ * @param[in] pulAttributeMap                 Flag to track whether all required attribute
+ *                                            are in the key generation template.
  *
  * @return CKR_OK if successful.
  */
-CK_RV prvCheckGenerateKeyPairPublicTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
-                                             CK_ATTRIBUTE_PTR pxTemplate,
-                                             CK_ULONG ulTemplateLength )
+static CK_RV prvCheckGenerateKeyPairPublicTemplate( CK_ATTRIBUTE_PTR * ppxLabel,
+                                             CK_ATTRIBUTE_PTR pxAttribute,
+                                             uint32_t * pulAttributeMap )
 {
-    CK_ATTRIBUTE xAttribute;
     CK_RV xResult = CKR_OK;
     CK_BBOOL xBool;
     CK_KEY_TYPE xKeyType;
     CK_BYTE xEcParams[] = pkcs11DER_ENCODED_OID_P256;
-    CK_ULONG ulIndex;
-    uint32_t xAttributeMap = 0;
-    uint32_t xRequiredAttributeMap = ( LABEL_IN_TEMPLATE | EC_PARAMS_IN_TEMPLATE | VERIFY_IN_TEMPLATE );
 
-    for( ulIndex = 0; ulIndex < ulTemplateLength && xResult == CKR_OK; ulIndex++ )
+    switch( pxAttribute->type )
     {
-        xAttribute = pxTemplate[ ulIndex ];
-        switch( xAttribute.type )
-        {
-            case ( CKA_LABEL ):
-                *ppxLabel = &pxTemplate[ ulIndex ];
-                xAttributeMap |= LABEL_IN_TEMPLATE;
-                break;
+        case ( CKA_LABEL ):
+            *ppxLabel = pxAttribute;
+            *pulAttributeMap |= LABEL_IN_TEMPLATE;
+            break;
 
-            case ( CKA_KEY_TYPE ):
-                ( void ) memcpy( &xKeyType, xAttribute.pValue, sizeof( CK_KEY_TYPE ) );
+        case ( CKA_KEY_TYPE ):
+            ( void ) memcpy( &xKeyType, pxAttribute->pValue, sizeof( CK_KEY_TYPE ) );
 
-                if( xKeyType != CKK_EC )
-                {
-                    PKCS11_PRINT( ( "ERROR: Only EC key pair generation is supported. \r\n" ) );
-                    xResult = CKR_TEMPLATE_INCONSISTENT;
-                }
-
-                break;
-
-            case ( CKA_EC_PARAMS ):
-                if( memcmp( xEcParams, xAttribute.pValue, sizeof( xEcParams ) ) != 0 ) 
-                {
-                    PKCS11_PRINT( ( "ERROR: Only P-256 key generation is supported. \r\n" ) );
-                    xResult = CKR_TEMPLATE_INCONSISTENT;
-                }
-
-                xAttributeMap |= EC_PARAMS_IN_TEMPLATE;
-                break;
-
-            case ( CKA_VERIFY ):
-                xAttributeMap |= VERIFY_IN_TEMPLATE;
-                ( void ) memcpy( &xBool, xAttribute.pValue, sizeof( CK_BBOOL ) );
-
-                if( xBool != CK_TRUE )
-                {
-                    PKCS11_PRINT( ( "ERROR: Generating public keys that are false for attribute CKA_VERIFY is not supported. \r\n", xAttribute.type ) );
-                    xResult = CKR_TEMPLATE_INCONSISTENT;
-                }
-                break;
-
-            default:
+            if( xKeyType != CKK_EC )
+            {
+                PKCS11_PRINT( ( "ERROR: Only EC key pair generation is supported. \r\n" ) );
                 xResult = CKR_TEMPLATE_INCONSISTENT;
-                break;
-        }
-    }
+            }
+            break;
 
-    if( ( xAttributeMap & xRequiredAttributeMap ) != xRequiredAttributeMap )
-    {
-        xResult = CKR_TEMPLATE_INCOMPLETE;
+        case ( CKA_EC_PARAMS ):
+            if( memcmp( xEcParams, pxAttribute->pValue, sizeof( xEcParams ) ) != 0 ) 
+            {
+                PKCS11_PRINT( ( "ERROR: Only P-256 key generation is supported. \r\n" ) );
+                xResult = CKR_TEMPLATE_INCONSISTENT;
+            }
+            *pulAttributeMap |= EC_PARAMS_IN_TEMPLATE;
+            break;
+
+        case ( CKA_VERIFY ):
+            ( void ) memcpy( &xBool, pxAttribute->pValue, sizeof( CK_BBOOL ) );
+
+            if( xBool != CK_TRUE )
+            {
+                PKCS11_PRINT( ( "ERROR: Generating public keys that are false for attribute CKA_VERIFY is not supported. \r\n" ) );
+                xResult = CKR_TEMPLATE_INCONSISTENT;
+            }
+            *pulAttributeMap |= VERIFY_IN_TEMPLATE;
+            break;
+
+        default:
+            xResult = CKR_TEMPLATE_INCONSISTENT;
+            break;
     }
 
     return xResult;
@@ -4008,11 +3996,15 @@ CK_DECLARE_FUNCTION( CK_RV, C_GenerateKeyPair )( CK_SESSION_HANDLE xSession,
     CK_RV xResult = PKCS11_SESSION_VALID_AND_MODULE_INITIALIZED( xSession );
     uint8_t * pucDerFile = pvPortMalloc( pkcs11KEY_GEN_MAX_DER_SIZE );
     int32_t lMbedResult = 0;
+    uint32_t ulIndex = 0;
     mbedtls_pk_context xCtx = { 0 };
     CK_ATTRIBUTE_PTR pxPrivateLabel = NULL;
     CK_ATTRIBUTE_PTR pxPublicLabel = NULL;
     CK_OBJECT_HANDLE xPalPublic = CK_INVALID_HANDLE;
     CK_OBJECT_HANDLE xPalPrivate = CK_INVALID_HANDLE;
+    uint32_t xPublicRequiredAttributeMap = ( LABEL_IN_TEMPLATE | EC_PARAMS_IN_TEMPLATE | VERIFY_IN_TEMPLATE );
+    uint32_t xPrivateRequiredAttributeMap = ( LABEL_IN_TEMPLATE | PRIVATE_IN_TEMPLATE | SIGN_IN_TEMPLATE );
+    uint32_t xAttributeMap = 0;
 
     #if ( pkcs11configSUPPRESS_ECDSA_MECHANISM == 1 )
         if( xResult == CKR_OK )
@@ -4051,16 +4043,42 @@ CK_DECLARE_FUNCTION( CK_RV, C_GenerateKeyPair )( CK_SESSION_HANDLE xSession,
 
     if( xResult == CKR_OK )
     {
-        xResult = prvCheckGenerateKeyPairPrivateTemplate( &pxPrivateLabel,
-                                                          pxPrivateKeyTemplate,
-                                                          ulPrivateKeyAttributeCount );
+        for( ulIndex = 0; ulIndex < ulPrivateKeyAttributeCount; ++ulIndex )
+        {
+            xResult = prvCheckGenerateKeyPairPrivateTemplate( &pxPrivateLabel,
+                                                          &pxPrivateKeyTemplate[ ulIndex ], 
+                                                          &xAttributeMap );
+
+            if( xResult != CKR_OK )
+            {
+                break;
+            }
+        }
+        
+        if( ( xAttributeMap & xPublicRequiredAttributeMap ) != xPublicRequiredAttributeMap )
+        {
+            xResult = CKR_TEMPLATE_INCOMPLETE;
+        }
     }
 
     if( xResult == CKR_OK )
     {
-        xResult = prvCheckGenerateKeyPairPublicTemplate( &pxPublicLabel,
-                                                         pxPublicKeyTemplate,
-                                                         ulPublicKeyAttributeCount );
+        xAttributeMap = 0;
+        for( ulIndex = 0; ulIndex < ulPublicKeyAttributeCount; ++ulIndex )
+        {
+            xResult = prvCheckGenerateKeyPairPublicTemplate( &pxPublicLabel,
+                                                         &pxPublicKeyTemplate[ ulIndex ], 
+                                                         &xAttributeMap );
+            if( xResult != CKR_OK )
+            {
+                break;
+            }
+        }
+
+        if( ( xAttributeMap & xPrivateRequiredAttributeMap ) != xPrivateRequiredAttributeMap )
+        {
+            xResult = CKR_TEMPLATE_INCOMPLETE;
+        }
     }
 
     if( xResult == CKR_OK )

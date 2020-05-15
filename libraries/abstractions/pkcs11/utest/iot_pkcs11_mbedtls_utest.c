@@ -2961,7 +2961,7 @@ void test_pkcs11_C_GenerateKeyPairBadArgs( void )
                                  sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  xPrivateKeyTemplate, sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  &xPubKeyHandle, &xPrivKeyHandle );
-    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCOMPLETE, xResult );
+    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCONSISTENT, xResult );
     xPrivateKeyTemplate[0].pValue = &xKeyType;
 
     xPublicKeyTemplate[2].pValue = &xEcGarbageParams;
@@ -2969,7 +2969,7 @@ void test_pkcs11_C_GenerateKeyPairBadArgs( void )
                                  sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  xPrivateKeyTemplate, sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  &xPubKeyHandle, &xPrivKeyHandle );
-    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCOMPLETE, xResult );
+    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCONSISTENT, xResult );
     xPublicKeyTemplate[2].pValue = &xEcParams;
 
     xResult = C_GenerateKeyPair( xSession, &xMechanism, xPublicKeyTemplate,
@@ -2984,7 +2984,7 @@ void test_pkcs11_C_GenerateKeyPairBadArgs( void )
                                  sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  xPrivateKeyTemplate, sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  &xPubKeyHandle, &xPrivKeyHandle );
-    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCOMPLETE, xResult );
+    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCONSISTENT, xResult );
     xPrivateKeyTemplate[3].pValue = &xTrue;
 
     xPrivateKeyTemplate[1].pValue = &xFalse;
@@ -2992,7 +2992,7 @@ void test_pkcs11_C_GenerateKeyPairBadArgs( void )
                                  sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  xPrivateKeyTemplate, sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  &xPubKeyHandle, &xPrivKeyHandle );
-    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCOMPLETE, xResult );
+    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCONSISTENT, xResult );
     xPrivateKeyTemplate[1].pValue = &xTrue;
 
     xPublicKeyTemplate[1].pValue = &xFalse;
@@ -3000,7 +3000,7 @@ void test_pkcs11_C_GenerateKeyPairBadArgs( void )
                                  sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  xPrivateKeyTemplate, sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  &xPubKeyHandle, &xPrivKeyHandle );
-    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCOMPLETE, xResult );
+    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCONSISTENT, xResult );
     xPublicKeyTemplate[1].pValue = &xTrue;
 
     xPublicKeyTemplate[0].pValue = &xBadKeyType;
@@ -3008,7 +3008,7 @@ void test_pkcs11_C_GenerateKeyPairBadArgs( void )
                                  sizeof( xPublicKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  xPrivateKeyTemplate, sizeof( xPrivateKeyTemplate ) / sizeof( CK_ATTRIBUTE ),
                                  &xPubKeyHandle, &xPrivKeyHandle );
-    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCOMPLETE, xResult );
+    TEST_ASSERT_EQUAL( CKR_TEMPLATE_INCONSISTENT, xResult );
     xPublicKeyTemplate[0].pValue = &xKeyType;
 
     prvCommonDeinitStubs();

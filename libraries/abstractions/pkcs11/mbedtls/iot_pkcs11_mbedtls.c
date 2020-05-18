@@ -872,7 +872,7 @@ static CK_RV prvEcKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
                                mbedtls_pk_context * pxMbedContext,
                                CK_BBOOL xIsPrivate )
 {
-    CK_RV xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+    CK_RV xResult = CKR_OK;
     CK_BBOOL xBool = CK_FALSE;
 
     /* Common EC key attributes. */
@@ -882,19 +882,15 @@ static CK_RV prvEcKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
         case ( CKA_KEY_TYPE ):
         case ( CKA_LABEL ):
             /* Do nothing. These attribute types were checked previously. */
-            xResult = CKR_OK;
             break;
 
         case ( CKA_TOKEN ):
             ( void ) memcpy( &xBool, ( void * ) pxAttribute->pValue, sizeof( CK_BBOOL ) );
 
-            if( xBool == CK_TRUE )
-            {
-                xResult = CKR_OK;
-            }
-            else
+            if( xBool != CK_TRUE )
             {
                 PKCS11_PRINT( ( "ERROR: Only token key creation is supported. \r\n" ) );
+                xResult = CKR_ATTRIBUTE_VALUE_INVALID;
             }
 
             break;
@@ -907,37 +903,34 @@ static CK_RV prvEcKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
                 xResult = CKR_TEMPLATE_INCONSISTENT;
                 PKCS11_PRINT( ( "ERROR: Only elliptic curve P-256 is supported.\r\n" ) );
             }
+
+            break;
+    case ( CKA_VERIFY ):
+    case ( CKA_EC_POINT ):
+            if( xIsPrivate == CK_FALSE )
+            {
+                xResult = prvEcPubKeyAttParse( pxAttribute, pxMbedContext );
+            }
             else
             {
-                xResult = CKR_OK;
+                xResult = CKR_ATTRIBUTE_VALUE_INVALID;
             }
-
             break;
-
+    case ( CKA_SIGN ):
+    case ( CKA_VALUE ):
+            if( xIsPrivate == CK_TRUE )
+            {
+                xResult = prvEcPrivKeyAttParse( pxAttribute, pxMbedContext );
+            }
+            else
+            {
+                xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+            }
+            break;
         default:
-            /* The rest of the cases will be handled in the helper functions */
+            PKCS11_PRINT( ( "Unknown attribute found for an EC public key. %d \r\n", pxAttribute->type ) );
+            xResult = CKR_ATTRIBUTE_TYPE_INVALID;
             break;
-    }
-
-    /* private EC key attributes. */
-    if( ( xResult == CKR_ATTRIBUTE_VALUE_INVALID ) && ( xIsPrivate == CK_TRUE ) )
-    {
-        xResult = prvEcPrivKeyAttParse( pxAttribute, pxMbedContext );
-    }
-
-    /* public EC key attributes. */
-    else if( ( xResult == CKR_ATTRIBUTE_VALUE_INVALID ) && ( xIsPrivate == CK_FALSE ) )
-    {
-        xResult = prvEcPubKeyAttParse( pxAttribute, pxMbedContext );
-    }
-    else
-    {
-        /* Errors will be output in the statement below in order to catch all cases. */
-    }
-
-    if( xResult != CKR_OK )
-    {
-        PKCS11_PRINT( ( "Error parsing EC key attributes. \r\n" ) );
     }
 
     return xResult;

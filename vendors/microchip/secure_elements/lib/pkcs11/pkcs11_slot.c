@@ -236,8 +236,8 @@ CK_RV pkcs11_slot_init(CK_SLOT_ID slotID)
             slot_ctx->initialized = TRUE;
         }
     }
-
-    return (ATCA_SUCCESS == status) ? CKR_OK : CKR_DEVICE_ERROR;
+	
+    return status;
 }
 
 static CK_ULONG pkcs11_slot_get_active_count(pkcs11_lib_ctx_ptr lib_ctx)

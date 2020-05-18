@@ -75,7 +75,7 @@ CK_RV pkcs11_lock_context(pkcs11_lib_ctx_ptr pContext)
 {
     CK_RV rv = CKR_ARGUMENTS_BAD;
 
-//    PKCS11_DEBUG("%p\r\n", pkcs11_context.lock_mutex);
+    PKCS11_DEBUG("%p\r\n", pkcs11_context.lock_mutex);
 
     if (pContext)
     {

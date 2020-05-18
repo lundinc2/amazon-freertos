@@ -758,7 +758,7 @@ static CK_RV prvEcPrivKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
 {
     CK_BBOOL xBool = CK_FALSE;
     int32_t lMbedReturn = 0;
-    CK_RV xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+    CK_RV xResult = CKR_OK;
     mbedtls_ecp_keypair * pxKeyPair = ( mbedtls_ecp_keypair * ) pxMbedContext->pk_ctx;
 
     switch( pxAttribute->type )
@@ -766,12 +766,9 @@ static CK_RV prvEcPrivKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
         case ( CKA_SIGN ):
             ( void ) memcpy( &xBool, pxAttribute->pValue, sizeof( CK_BBOOL ) );
 
-            if( xBool == CK_TRUE )
+            if( xBool == CK_FALSE )
             {
-                xResult = CKR_OK;
-            }
-            else
-            {
+                xResult = CKR_ATTRIBUTE_VALUE_INVALID;
                 PKCS11_PRINT( ( "ERROR: Only EC private keys with signing privileges are supported. \r\n" ) );
             }
 
@@ -782,11 +779,7 @@ static CK_RV prvEcPrivKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
                                                    pxAttribute->pValue,
                                                    pxAttribute->ulValueLen );
 
-            if( lMbedReturn == 0 )
-            {
-                xResult = CKR_OK;
-            }
-            else
+            if( lMbedReturn != 0 )
             {
                 xResult = CKR_FUNCTION_FAILED;
                 PKCS11_PRINT( ( "mbedTLS mpi read binary failed with error %s : %s \r\n",
@@ -814,7 +807,7 @@ static CK_RV prvEcPubKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
 {
     CK_BBOOL xBool = CK_FALSE;
     int32_t lMbedReturn = 0;
-    CK_RV xResult = CKR_ATTRIBUTE_VALUE_INVALID;
+    CK_RV xResult = CKR_OK;
     mbedtls_ecp_keypair * pxKeyPair = ( mbedtls_ecp_keypair * ) pxMbedContext->pk_ctx;
 
     switch( pxAttribute->type )
@@ -822,12 +815,9 @@ static CK_RV prvEcPubKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
         case ( CKA_VERIFY ):
             ( void ) memcpy( &xBool, pxAttribute->pValue, pxAttribute->ulValueLen );
 
-            if( xBool == CK_TRUE )
+            if( xBool == CK_FALSE )
             {
-                xResult = CKR_OK;
-            }
-            else
-            {
+                xResult = CKR_ATTRIBUTE_VALUE_INVALID;
                 PKCS11_PRINT( ( "Only EC public keys with verify permissions supported. \r\n" ) );
             }
 
@@ -840,11 +830,7 @@ static CK_RV prvEcPubKeyAttParse( CK_ATTRIBUTE_PTR pxAttribute,
                                                          ( ( uint8_t * ) ( pxAttribute->pValue ) + 2 ),
                                                          ( pxAttribute->ulValueLen - 2 ) );
 
-            if( lMbedReturn == 0 )
-            {
-                xResult = CKR_OK;
-            }
-            else
+            if( lMbedReturn != 0 )
             {
                 xResult = CKR_FUNCTION_FAILED;
                 PKCS11_PRINT( ( "mbedTLS ecp point read binary failed with %s : ",

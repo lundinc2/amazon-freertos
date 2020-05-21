@@ -427,7 +427,6 @@ static CK_BBOOL prvOperationActive( const P11Session_t * pxSession )
   * of the function, as the memory will become invalid once the function scope 
   * is left. 
   */
-/* coverity[misra_c_2012_rule_8_9_violation] */
 static CK_FUNCTION_LIST prvP11FunctionList =
 {
     { CRYPTOKI_VERSION_MAJOR, CRYPTOKI_VERSION_MINOR },

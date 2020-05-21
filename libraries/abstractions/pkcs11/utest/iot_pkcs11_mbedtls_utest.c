@@ -873,7 +873,7 @@ void test_pkcs11_C_OpenSessionBadArgs( void )
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
 }
 
-/* ======================  TESTING C_OpenSession  ============================ */
+/* ======================  TESTING C_CloseSession  ============================ */
 
 /*!
  * @brief C_CloseSession happy path.
@@ -888,6 +888,38 @@ void test_pkcs11_C_CloseSession( void )
 
     xResult = prvCloseSession( &xSession );
     TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = prvUninitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+}
+
+/*!
+ * @brief C_CloseSession PKCS #11 not initialized.
+ *
+ */
+void test_pkcs11_C_CloseSessionUninit( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+
+    xResult = C_CloseSession( xSession );
+    TEST_ASSERT_EQUAL( CKR_CRYPTOKI_NOT_INITIALIZED, xResult );
+}
+
+/*!
+ * @brief C_CloseSession PKCS #11 invalid session.
+ *
+ */
+void test_pkcs11_C_CloseSessionBadSession( void )
+{
+    CK_RV xResult = CKR_OK;
+    CK_SESSION_HANDLE xSession = 0;
+
+    xResult = prvInitializePkcs11();
+    TEST_ASSERT_EQUAL( CKR_OK, xResult );
+
+    xResult = C_CloseSession( xSession );
+    TEST_ASSERT_EQUAL( CKR_SESSION_HANDLE_INVALID, xResult );
 
     xResult = prvUninitializePkcs11();
     TEST_ASSERT_EQUAL( CKR_OK, xResult );

@@ -33,7 +33,7 @@
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 
-/* PKCS #11 incldues. */
+/* PKCS #11 includes. */
 #include "iot_pkcs11_config.h"
 #include "iot_crypto.h"
 #include "iot_pkcs11.h"
@@ -908,7 +908,7 @@ static void prvFindObjectInListByHandle( CK_OBJECT_HANDLE xAppHandle,
     *pxLabelLength = 0;
     *pxPalHandle = CK_INVALID_HANDLE;
 
-    if( ( ulIndex > 0 ) && ( ulIndex < pkcs11configMAX_NUM_OBJECTS ) )
+    if( ulIndex < pkcs11configMAX_NUM_OBJECTS )
     {
         if( xP11Context.xObjectList.xObjects[ ulIndex ].xHandle != CK_INVALID_HANDLE )
         {
@@ -931,9 +931,9 @@ static CK_RV prvDeleteObjectFromList( CK_OBJECT_HANDLE xAppHandle )
 {
     CK_RV xResult = CKR_OK;
     BaseType_t xGotSemaphore = pdFALSE;
-    int32_t ulIndex = xAppHandle - 1UL;
+    int32_t ulIndex = xAppHandle - 1;
 
-    if( ( ulIndex >= pkcs11configMAX_NUM_OBJECTS ) || ( ulIndex < 0 ) )
+    if( ulIndex >= pkcs11configMAX_NUM_OBJECTS )
     {
         xResult = CKR_OBJECT_HANDLE_INVALID;
     }
@@ -1019,7 +1019,7 @@ static CK_RV prvAddObjectToList( CK_OBJECT_HANDLE xPalHandle,
                 {
                     xP11Context.xObjectList.xObjects[ lInsertIndex ].xHandle = xPalHandle;
                     ( void ) memcpy( xP11Context.xObjectList.xObjects[ lInsertIndex ].xLabel, pcLabel, xLabelLength );
-                    *pxAppHandle = lInsertIndex + 1UL;
+                    *pxAppHandle = lInsertIndex + 1;
                 }
                 else
                 {
@@ -1762,10 +1762,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_CloseSession )( CK_SESSION_HANDLE hSession )
         /*
          * Tear down the session.
          */
-        if( NULL != pxSession->xSignKey.pk_ctx )
-        {
-            mbedtls_pk_free( &pxSession->xSignKey );
-        }
+        mbedtls_pk_free( &pxSession->xSignKey );
 
         if( NULL != pxSession->xSignMutex )
         {
@@ -1773,10 +1770,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_CloseSession )( CK_SESSION_HANDLE hSession )
         }
 
         /* Free the public key context if it exists. */
-        if( NULL != pxSession->xVerifyKey.pk_ctx )
-        {
-            mbedtls_pk_free( &pxSession->xVerifyKey );
-        }
+        mbedtls_pk_free( &pxSession->xVerifyKey );
 
         if( NULL != pxSession->xVerifyMutex )
         {
@@ -3285,10 +3279,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE hSession,
         {
             /* Free the private key context if it exists.
              * TODO: Check if the key is the same as was used previously. */
-            if( NULL != pxSession->xSignKey.pk_ctx )
-            {
-                mbedtls_pk_free( &pxSession->xSignKey );
-            }
+            mbedtls_pk_free( &pxSession->xSignKey );
 
             mbedtls_pk_init( &pxSession->xSignKey );
             lMbedTLSResult = mbedtls_pk_parse_key( &pxSession->xSignKey, pulKeyData, ulKeyDataLength, NULL, 0 );
@@ -3604,10 +3595,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_VerifyInit )( CK_SESSION_HANDLE hSession,
         {
             /* Free the public key context if it exists.
              * TODO: Check if the key is the same as used by last verify operation. */
-            if( NULL != pxSession->xVerifyKey.pk_ctx )
-            {
-                mbedtls_pk_free( &pxSession->xVerifyKey );
-            }
+            mbedtls_pk_free( &pxSession->xVerifyKey );
 
             mbedtls_pk_init( &pxSession->xVerifyKey );
 

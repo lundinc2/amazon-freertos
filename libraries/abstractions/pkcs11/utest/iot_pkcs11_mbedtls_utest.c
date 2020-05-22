@@ -282,6 +282,7 @@ static CK_RV prvCloseSession( CK_SESSION_HANDLE_PTR pxSession )
     CK_RV xResult = CKR_OK;
 
     vQueueDelete_Ignore();
+    mbedtls_pk_free_CMockIgnore();
     vPortFree_Stub( vPkcs11FreeCb );
     mbedtls_sha256_free_CMockIgnore();
     xResult = C_CloseSession( *pxSession );

@@ -1910,7 +1910,7 @@ void test_pkcs11_C_FindObjectsInitActiveOp( void )
     /* Clean up after the successful C_FindObjectsInit. */
     xResult = C_FindObjectsFinal( xSession );
     TEST_ASSERT_EQUAL( CKR_OPERATION_NOT_INITIALIZED, xResult );
-    
+
     /* The memory that was initialized in the first call gets free'd in the second
      * call because they share a session. */
     usMallocFreeCalls--;
@@ -2645,7 +2645,7 @@ void test_pkcs11_C_VerifyInitECDSA( void )
     CK_SESSION_HANDLE xSession = 0;
     CK_OBJECT_HANDLE xObject = 0;
     CK_MECHANISM xMechanism = { 0 };
-    mbedtls_pk_context xVerifyKey = { 0 };
+    mbedtls_pk_context xVerifyKey = { NULL, &xResult };
 
     xMechanism.mechanism = CKM_ECDSA;
     CK_BBOOL xIsPrivate = CK_FALSE;
@@ -2754,7 +2754,7 @@ void test_pkcs11_C_VerifyECDSA( void )
     CK_RV xResult = CKR_OK;
     CK_SESSION_HANDLE xSession = 0;
     CK_OBJECT_HANDLE xObject = 0;
-    mbedtls_pk_context xVerifyKey = { 0 };
+    mbedtls_pk_context xVerifyKey = { NULL, &xResult };
     CK_MECHANISM xMechanism = { 0 };
     CK_BYTE pxDummyData[ pkcs11SHA256_DIGEST_LENGTH ] = { 0xAA };
     CK_ULONG ulDummyDataLen = sizeof( pxDummyData );
@@ -2847,7 +2847,7 @@ void test_pkcs11_C_VerifyBadArgs( void )
     CK_SESSION_HANDLE xSession = 0;
     CK_OBJECT_HANDLE xObject = 0;
     CK_MECHANISM xMechanism = { 0 };
-    mbedtls_pk_context xVerifyKey = { 0 };
+    mbedtls_pk_context xVerifyKey = { NULL, &xResult };
     CK_BYTE pxDummyData[ pkcs11SHA256_DIGEST_LENGTH ] = { 0xAA };
     CK_ULONG ulDummyDataLen = sizeof( pxDummyData );
     CK_BYTE pxDummySignature[ pkcs11ECDSA_P256_SIGNATURE_LENGTH ] = { 0xAA };

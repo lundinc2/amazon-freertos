@@ -1194,11 +1194,6 @@ CK_RV xProvisionDevice( CK_SESSION_HANDLE xSession,
                 xProvisionedState.pucDerPublicKey = NULL;
             }
 
-            /* Get the bytes of the new public key. */
-            prvExportPublicKey( xSession,
-                                xProvisionedState.xPublicKey,
-                                &xProvisionedState.pucDerPublicKey,
-                                &xProvisionedState.ulDerPublicKeyLength );
         }
 
         /* Ensure that an error condition is set if either object is still
@@ -1210,6 +1205,7 @@ CK_RV xProvisionDevice( CK_SESSION_HANDLE xSession,
             xResult = CKR_KEY_HANDLE_INVALID;
         }
     }
+
 
     /* Log the device public key for developer enrollment purposes, but only if
     * there's not already a certificate, or if a new key was just generated. */
@@ -1234,6 +1230,15 @@ CK_RV xProvisionDevice( CK_SESSION_HANDLE xSession,
          * lab may depend on the developer obtaining the public key. */
         /*vTaskDelay( pdMS_TO_TICKS( 100 ) ); */
     }
+            /* Get the bytes of the new public key. */
+            prvExportPublicKey( xSession,
+                                xProvisionedState.xPublicKey,
+                                &xProvisionedState.pucDerPublicKey,
+                                &xProvisionedState.ulDerPublicKeyLength );
+
+        prvWriteHexBytesToConsole( "Device public key",
+                                   xProvisionedState.pucDerPublicKey,
+                                   xProvisionedState.ulDerPublicKeyLength );
 
     /* Free memory. */
     if( NULL != xProvisionedState.pucDerPublicKey )

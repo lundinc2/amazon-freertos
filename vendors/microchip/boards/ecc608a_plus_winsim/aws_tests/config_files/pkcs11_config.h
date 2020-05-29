@@ -65,7 +65,7 @@
 
 /** Enable PKCS#11 Debugging Messages */
 #ifndef PKCS11_DEBUG_ENABLE
-#define PKCS11_DEBUG_ENABLE             0
+#define PKCS11_DEBUG_ENABLE             1
 #endif
 
 /** Use Static or Dynamic Allocation */

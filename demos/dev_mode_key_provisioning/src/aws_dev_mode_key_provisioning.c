@@ -726,6 +726,7 @@ CK_RV xDestroyProvidedObjects( CK_SESSION_HANDLE xSession,
 CK_RV xDestroyDefaultCryptoObjects( CK_SESSION_HANDLE xSession )
 {
     CK_RV xResult;
+    configPRINTF( ( "Attempting to destroy default crypto objects." ) );
     CK_BYTE * pxPkcsLabels[] =
     {
         ( CK_BYTE * ) pkcs11configLABEL_DEVICE_CERTIFICATE_FOR_TLS,

@@ -28,7 +28,6 @@ package main
 import (
 	"crypto/rand"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"io"
@@ -58,21 +57,18 @@ func secureEcho(certPath string, keyPath string, port string, verbose bool) {
 	if err != nil {
 		log.Fatalf("Error %s while loading server certificates", err)
 	}
-
-	serverCA, err := ioutil.ReadFile(certPath)
+	// load certificates
+	servertCert2, _ := tls.LoadX509KeyPair("certs/server2.pem", "certs/server2.key")
 	if err != nil {
-		log.Fatalf("Error %s while reading server certificates", err)
+		log.Fatalf("Error %s while loading server certificates", err)
 	}
-
-	serverCAPool := x509.NewCertPool()
-	serverCAPool.AppendCertsFromPEM(serverCA)
 
 	//Configure TLS
-	tlsConfig := tls.Config{Certificates: []tls.Certificate{servertCert},
+	tlsConfig := tls.Config{Certificates: []tls.Certificate{servertCert2, servertCert},
 		MinVersion: tls.VersionTLS12,
-		RootCAs:    serverCAPool,
 		ClientAuth: tls.RequireAnyClientCert,
 	}
+	tlsConfig.BuildNameToCertificate()
 
 	tlsConfig.Rand = rand.Reader
 	echoServerThread(port, &tlsConfig, verbose)

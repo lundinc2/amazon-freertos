@@ -31,10 +31,10 @@
  * tcptestECHO_PORT with IP address
  * and port of unencrypted TCP echo server. */
 #define tcptestECHO_SERVER_ADDR0         34
-#define tcptestECHO_SERVER_ADDR1         218
-#define tcptestECHO_SERVER_ADDR2         25
-#define tcptestECHO_SERVER_ADDR3         197
-#define tcptestECHO_PORT                 ( 8883 )
+#define tcptestECHO_SERVER_ADDR1         214
+#define tcptestECHO_SERVER_ADDR2         3
+#define tcptestECHO_SERVER_ADDR3         53
+#define tcptestECHO_PORT                 ( 9000 )
 
 /* Encrypted Echo Server.
  * If tcptestSECURE_SERVER is set to 1, the following must be updated:
@@ -49,16 +49,40 @@
 #define tcptestSECURE_SERVER             1
 
 #define tcptestECHO_SERVER_TLS_ADDR0     34
-#define tcptestECHO_SERVER_TLS_ADDR1     218
-#define tcptestECHO_SERVER_TLS_ADDR2     25
-#define tcptestECHO_SERVER_TLS_ADDR3     197
-#define tcptestECHO_PORT_TLS             ( 443 )
+#define tcptestECHO_SERVER_TLS_ADDR1     214
+#define tcptestECHO_SERVER_TLS_ADDR2     3
+#define tcptestECHO_SERVER_TLS_ADDR3     53
+#define tcptestECHO_PORT_TLS             ( 9001 )
 
 /* Number of times to retry a connection if it fails. */
 #define tcptestRETRY_CONNECTION_TIMES    6
 
 /* The root certificate used for the encrypted echo server.
  * This certificate is self-signed, and not in the trusted catalog. */
-static const char tcptestECHO_HOST_ROOT_CA[] = "Paste root certificate here";
+static const char tcptestECHO_HOST_ROOT_CA[] = "" \
+"-----BEGIN CERTIFICATE-----\n" \
+"MIID2TCCAsGgAwIBAgIUerzk0hsdnbOXye6E7I9N+K/gfnswDQYJKoZIhvcNAQEL\n" \
+"BQAwfDELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAldBMQwwCgYDVQQHDANTZWExDzAN\n" \
+"BgNVBAoMBkFtYXpvbjEMMAoGA1UECwwDSW9UMRAwDgYDVQQDDAdsdW5kaW5jMSEw\n" \
+"HwYJKoZIhvcNAQkBFhJsdW5kaW5jQGFtYXpvbi5jb20wHhcNMjAwMzA1MTgwNjI2\n" \
+"WhcNMjEwMzA1MTgwNjI2WjB8MQswCQYDVQQGEwJVUzELMAkGA1UECAwCV0ExDDAK\n" \
+"BgNVBAcMA1NlYTEPMA0GA1UECgwGQW1hem9uMQwwCgYDVQQLDANJb1QxEDAOBgNV\n" \
+"BAMMB2x1bmRpbmMxITAfBgkqhkiG9w0BCQEWEmx1bmRpbmNAYW1hem9uLmNvbTCC\n" \
+"ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANog4OrB3uLF43rJE/TDZjjS\n" \
+"HmVY39gEn19Wb3HGBZMIS8zYyQScuTBOk55RAJaJVQFI+u/St7MqT+gs4cxgrfEx\n" \
+"6DT/v7U2hIdQzTRea8fBbe3UkijrFg7XbUwor7ZRU9ODkMzUcBBedW9zjzqGX/T3\n" \
+"Hi/XqEYFEVCUVZT0PU1zJOygIxd1bK0id7KmmANhzi/0tQSTZEQkuX5NkqSxbDzo\n" \
+"TVhqA25RjLfcJBKKgSqK4/am1k65BFmvyARGG5VNfbEOnwWQC9WLsKBV0TrKoQEn\n" \
+"dkscXZBrub7mqvnfR1VY9jOGURtM8oalpbUnWS1gSRx0WYsr59go8jMAottctWcC\n" \
+"AwEAAaNTMFEwHQYDVR0OBBYEFFYgQVhRcZO63EE37je+BYpvtLgZMB8GA1UdIwQY\n" \
+"MBaAFFYgQVhRcZO63EE37je+BYpvtLgZMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZI\n" \
+"hvcNAQELBQADggEBAKe3rFPsJqGrkW8pv3CuKkZt2utLH/h5of8Ep/tHcuactS/H\n" \
+"q2FSd6RKiN0vZzclQB7jsQ4el2yH3sfp877pznTteXTjtdRwA1G06Q+9SPb7OCoG\n" \
+"qUl4dQgqonWEVcgZfGO0vlFypTMtnyPxqb2ECUh8f9CEdrFst/O8DW4+6t5HNaGD\n" \
+"8r85KR4ix7BWCJrK+BwDWQhKxIa7fenhnpyRwBYj92UaHSeNrYWgPxhnCf0Ho0gG\n" \
+"5WRwX/G7djj18z6kNoUi3Ju7NlRZrEkHe+XH1O0590C8qBScgWDtrUXRCYrBqKiz\n" \
+"tfAoGLYfHR01UAW6QqmLENb3xLATi8dSu+G/ZxU=\n" \
+"-----END CERTIFICATE-----";
+
 
 #endif /* ifndef AWS_TEST_TCP_H */

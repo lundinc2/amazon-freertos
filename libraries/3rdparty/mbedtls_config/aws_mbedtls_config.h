@@ -42,7 +42,7 @@
 
 /**
  * \def MBEDTLS_HAVE_ASM
- *
+ 
  * The compiler has support for asm().
  *
  * Requires support for asm() in compiler.
@@ -2169,7 +2169,7 @@
  *
  * This module provides debugging functions.
  */
-//#define MBEDTLS_DEBUG_C
+#define MBEDTLS_DEBUG_C
 
 /**
  * \def MBEDTLS_DES_C

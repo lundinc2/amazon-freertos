@@ -5,25 +5,22 @@ This document summarizes the testing plan for the PKCS #11 stack.
 If you are working on qualifying a PKCS #11 stack it is sufficient to only read the "Qualification Tests" section. There is an "outline" section that outlines that describes the tests.
 
 ## Qualification Tests
-The PKCS #11 stack can be qualified for three different provisioning use cases. The tests are split so that an implementation or device can specify a provisioning model to support. **A device / port only needs to support one of these three mechanisms.**
+The PKCS #11 stack can be qualified for three different provisioning use cases. The tests are split so that an implementation or device can specify a provisioning model to support. **A device / port at the minimum must support one provisioning mechanism.**
 
-The tests in this group are always run regardless of the provisioning strategy the PKCS #11 stack is being qualified for. These tests don't require any objects and outline the expectations various libraries have.
+**The following test groups must always pass regardless of provisioning method.**
 
-**These tests must always pass, there is no exception that can be made here for qualification.**
-
-The test groups in this category are called:
 - Full_PKCS11_Management
-    - This group focuses on the various management APIs in PKCS #11 as C_Initialize, C_Finalize, and sessions. It is always required ot pass this group, as all the libraries using PKCS #11 rely on the behavior under test.
+    - This test group exercises the various management APIs in PKCS #11 as C_Initialize, C_Finalize, and sessions.
 - Full_PKCS11_NoObject
-    - This group focuses on crypto operations that don't require an object. For example creating a message digest or generating a random number. Once again this group is always required.
+    - This test group exercises crypto operations that don't require an object. An example would be creating a SHA-256 digest or generating a random number.
 - Full_PKCS11_SignVerify
-    - This group focuses on signing a message digest and seeing if the signature can be verified. Note that it tests the PKCS #11 implementation's ability to trust itself, as well as validating this property using mbed TLS.
+    - This test group focuses on signing a message digest and verifying that the signature can be trusted. Note that it tests the PKCS #11 implementation's ability to trust itself, as well as validating this property using mbed TLS.
     - Warning: This test group assumes that there exists objects that can be used for the tests. If there is no public and private key on the device, this test case will fail.
 
 #### Qualifying For Credential Importing
 The test group in this category is called Full_PKCS11_ImportCredentials. This test group can be enabled by setting *pkcs11configIMPORT_SUPPORTED* to 1, in *iot_pkcs11_config.h*.
 
-Should this test group pass, it is assumed that the PKCS #11 implementation has the capability of provisioning a x509 certificate, public, and private key that were all generated on a different device. The device must be capable of retaining these in flash, if the port is being created using the PKCS11_PAL.
+Should this test group pass, it is assumed that the PKCS #11 implementation has the capability of provisioning a x509 certificate, public, and private key that were all generated on a different device. The device MUST be capable of retaining these in flash and retain them between power cycles.
 
 #### Qualifying For Generating Credentials 
 The test group in this category is called Full_PKCS11_GenerateCredentials. This test group can be enabled by setting *pkcs11configGENERATE_SUPPORTED* to 1. Should this test group pass it is assumed that the PKCS #11 implementation has the capability of creating a private and public key pair. 
@@ -53,7 +50,7 @@ See for more documentation [here](https://github.com/aws/amazon-freertos/tree/ma
 ## Model Based Tests
 Model based tests exist for PKCS #11 as well. They can be found in the test directory, with the prefix MBT. These tests are complementary tests, and are not necessary for qualification. The purpose of these tests is to test that conformance of iot_pkcs11_mbedtls.c to the PKCS #11 specification.
 
-Currently only the windows simulator has been used with these tests. In order to run them add the MBT prefixed files, and iot_test_pkcs11_globals.h to the aws_test project for the windows platform and define testrunnerFULL_PKCS11_MODEL_ENABLED to 1 in the *aws_test_runner_config.h*.
+Currently only the windows simulator has been used with these tests. In order to run them define testrunnerFULL_PKCS11_MODEL_ENABLED to 1 in *aws_test_runner_config.h*.
 
 ## System Test outline
 ### Assumptions
@@ -68,30 +65,16 @@ The test group Full_PKCS11_SignVerify makes an assumption that a private key and
 
 ### Verification
 #### Using mbed TLS
-(Currently this is the only method we support, I hope to update that before merging this report)
-TODO/TBD:
-- Create a macro to disable mbed TLS verification
-- Document what is being verified 
-- 
+Crypto operations such as creating a digest or a signature are verified using mbed TLS.
 
 #### Using OpenSSL
-This is an alternative to cross-verify the capabilities of the PKCS #11 implementation / device. Instead of using the device to cross-verify it's own capabilities, the proposal is to use OpenSSL and a separate device to make sure that the tests can be trusted. This could be done in a python script or something similar, or manual verification. 
-
-Should we go ahead with this will need to supply some automated way to run this for IDT. Ideally IDT would use a script similar to the one that would be hosted in reference integrations repo.
+In the future this may be an alternative to cross-verify the capabilities of the PKCS #11 implementation / device. Instead of using the device to cross-verify it's own capabilities, the device will output data to the serial port, and the data will be examined and verified by an external program.
 
 Why:
 - Some devices may be too small to link two crypto stacks.
 - All of our crypto/tls is very tightly coupled to mbed TLS, decoupling the tests from mbed TLS is another step towards being agnostic to the implementation.
 - This moves some responsibility from the tests to the device that is verifying the qualification. 
 - Remove one dependency from the tests (or support either method).
-
-TODO/TBD:
-- Propose this as a mechanism of verification
-- Introduce support to IDT if this is the case
-- Create scripts that automate the cross-verification
-- Determine the proper mechanism for delivering the data to verify
--
-
 
 ### Test Order
 Generally the order of these tests does not matter. The exception is the Full_PKCS11_SignVerify test group. This group has a dependency for the credentials used in the test to already exist. Depending on what provisioning mechanism the device / PKCS #11 port supports, there are various ways to load these credentials onto the device.

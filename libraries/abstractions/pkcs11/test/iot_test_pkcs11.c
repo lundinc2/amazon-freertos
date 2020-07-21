@@ -110,7 +110,7 @@ TEST_GROUP( Full_PKCS11_RSA );
 /* The EC test group is for tests that require elliptic curve keys. */
 TEST_GROUP( Full_PKCS11_EC );
 
-/* #define PKCS11_TEST_MEMORY_LEAK */
+#define PKCS11_TEST_MEMORY_LEAK
 #ifdef PKCS11_TEST_MEMORY_LEAK
     BaseType_t xHeapBefore;
     BaseType_t xHeapAfter;

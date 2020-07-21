@@ -119,7 +119,7 @@ TEST_GROUP( Full_PKCS11_RSA );
 /* The EC test group is for tests that require elliptic curve keys. */
 TEST_GROUP( Full_PKCS11_EC );
 
-/* #define PKCS11_TEST_MEMORY_LEAK */
+#define PKCS11_TEST_MEMORY_LEAK
 #ifdef PKCS11_TEST_MEMORY_LEAK
     BaseType_t xHeapBefore;
     BaseType_t xHeapAfter;
@@ -402,99 +402,76 @@ static MultithreadTaskParams_t xGlobalTaskParams[ pkcs11testMULTI_THREAD_TASK_CO
 /* Specifies bits for all tasks to the event group. */
 #define pkcs11testALL_BITS    ( ( 1 << pkcs11testMULTI_THREAD_TASK_COUNT ) - 1 )
 
-static CK_RV prvExportPublicKey( CK_SESSION_HANDLE xSession,
-                                 CK_OBJECT_HANDLE xPublicKeyHandle,
-                                 uint8_t ** ppucDerPublicKey,
-                                 uint32_t * pulDerPublicKeyLength )
+
+/* Helper function to extract the EC public key from PKCS #11 and put it in an 
+ * mbedTLS context. This function will handle all initialization and memory allocation.
+ * Cleanup will occur by calling prvExtractECPublicKeyCleanup */
+static CK_RV prvExtractECPublicKeyIntoMbedTLSCtx( mbedtls_pk_context * pxEcdsaContext,
+                                 CK_OBJECT_HANDLE xPublicKeyHandle )
 {
-    CK_RV xResult;
-    CK_FUNCTION_LIST_PTR pxFunctionList;
-    CK_KEY_TYPE xKeyType = 0;
-    CK_ATTRIBUTE xTemplate = { 0 };
-    uint8_t pucEcP256AsnAndOid[] =
-    {
-        0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86,
-        0x48, 0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a,
-        0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 0x03,
-        0x42, 0x00
-    };
-    uint8_t pucUnusedKeyTag[] = { 0x04, 0x41 };
+    /* Verify the signature with mbedTLS */
+    int lMbedTLSResult;
+    CK_RV xResult = CKR_OK;
+    uint32_t ulDerBufSize = 200;
+    CK_BYTE_PTR pxDerKey = NULL;
+    CK_ATTRIBUTE xPubKeyQuery = { CKA_EC_POINT, NULL, 0 }; 
+    CK_BYTE * pxPublicKey = NULL;
 
-    /* This variable is used only for its size. This gets rid of compiler warnings. */
-    ( void ) pucUnusedKeyTag;
+    mbedtls_pk_init( pxEcdsaContext );
+    
+    /* Reconstruct public key from EC Params. */
+    mbedtls_ecp_keypair * pxKeyPair;
+    /* Initialize the info. */
+    pxEcdsaContext->pk_info = &mbedtls_eckey_info;
 
-    xResult = C_GetFunctionList( &pxFunctionList );
+    /* Initialize the context. */
+    pxEcdsaContext->pk_ctx = pxKeyPair;
+    pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
 
-    /* Query the key type. */
-    if( CKR_OK == xResult )
-    {
-        xTemplate.type = CKA_KEY_TYPE;
-        xTemplate.pValue = &xKeyType;
-        xTemplate.ulValueLen = sizeof( xKeyType );
-        xResult = pxFunctionList->C_GetAttributeValue( xSession,
-                                                       xPublicKeyHandle,
-                                                       &xTemplate,
-                                                       1 );
-    }
+    mbedtls_ecp_keypair_init( pxKeyPair );
+    mbedtls_ecp_group_init( &pxKeyPair->grp );
 
-    /* Scope to ECDSA keys only, since there's currently no use case for
-     * onboard keygen and certificate enrollment for RSA. */
-    if( ( CKR_OK == xResult ) && ( CKK_ECDSA == xKeyType ) )
-    {
-        /* Query the size of the public key. */
-        xTemplate.type = CKA_EC_POINT;
-        xTemplate.pValue = NULL;
-        xTemplate.ulValueLen = 0;
-        xResult = pxFunctionList->C_GetAttributeValue( xSession,
-                                                       xPublicKeyHandle,
-                                                       &xTemplate,
-                                                       1 );
+    /* At this time, only P-256 curves are supported. */
+    lMbedTLSResult = mbedtls_ecp_group_load( &pxKeyPair->grp,
+                                             MBEDTLS_ECP_DP_SECP256R1 );
+    configASSERT( 0 == lMbedTLSResult );
 
-        /* Allocate a buffer large enough for the full, encoded public key. */
-        if( CKR_OK == xResult )
-        {
-            /* Add space for the full DER header. */
-            xTemplate.ulValueLen += sizeof( pucEcP256AsnAndOid ) - sizeof( pucUnusedKeyTag );
-            *pulDerPublicKeyLength = xTemplate.ulValueLen;
+    /* Get public key from PKCS #11 stack. */
+    xResult = pxGlobalFunctionList->C_GetAttributeValue( xGlobalSession, xPublicKeyHandle, &xPubKeyQuery, 1 );
+    TEST_ASSERT_EQUAL_MESSAGE( CKR_OK, xResult, "Failed to query for public key length" );
+    TEST_ASSERT_NOT_EQUAL_MESSAGE( 0, xPubKeyQuery.ulValueLen, "The size of the public key was an unexpected value." );
 
-            /* Get a heap buffer. */
-            *ppucDerPublicKey = pvPortMalloc( xTemplate.ulValueLen );
+    pxPublicKey = pvPortMalloc( xPubKeyQuery.ulValueLen );
+    TEST_ASSERT_NOT_EQUAL_MESSAGE( NULL, pxPublicKey, "Failed to allocate space for public key." );
 
-            /* Check for resource exhaustion. */
-            if( NULL == *ppucDerPublicKey )
-            {
-                xResult = CKR_HOST_MEMORY;
-            }
-        }
 
-        /* Export the public key. */
-        if( CKR_OK == xResult )
-        {
-            xTemplate.pValue = *ppucDerPublicKey + sizeof( pucEcP256AsnAndOid ) - sizeof( pucUnusedKeyTag );
-            xTemplate.ulValueLen -= ( sizeof( pucEcP256AsnAndOid ) - sizeof( pucUnusedKeyTag ) );
-            xResult = pxFunctionList->C_GetAttributeValue( xSession,
-                                                           xPublicKeyHandle,
-                                                           &xTemplate,
-                                                           1 );
-        }
+    xPubKeyQuery.pValue = pxPublicKey;
+    xResult = pxGlobalFunctionList->C_GetAttributeValue( xGlobalSession, xPublicKeyHandle, &xPubKeyQuery, 1 );
+    TEST_ASSERT_EQUAL_MESSAGE( CKR_OK, xResult, "Failed to query for public key length" );
+    TEST_ASSERT_NOT_EQUAL_MESSAGE( 0, xPubKeyQuery.ulValueLen, "The size of the public key was an unexpected value." );
 
-        /* Prepend the full DER header. */
-        if( CKR_OK == xResult )
-        {
-            memcpy( *ppucDerPublicKey, pucEcP256AsnAndOid, sizeof( pucEcP256AsnAndOid ) );
-        }
-    }
+    lMbedTLSResult = mbedtls_ecp_point_read_binary( &pxKeyPair->grp,
+                                                 &pxKeyPair->Q,
+                                                 xPubKeyQuery.pValue,
+                                                 xPubKeyQuery.ulValueLen );
+    configASSERT( 0 == lMbedTLSResult );
+    pxDerKey = pvPortMalloc( ulDerBufSize );
 
-    /* Free memory if there was an error after allocation. */
-    if( ( NULL != *ppucDerPublicKey ) && ( CKR_OK != xResult ) )
-    {
-        vPortFree( *ppucDerPublicKey );
-        *ppucDerPublicKey = NULL;
-    }
+    configASSERT( NULL != pxDerKey  );
 
-    return xResult;
+    ulDerBufSize = mbedtls_pk_write_pubkey_der( pxEcdsaContext, pxDerKey, ulDerBufSize );
+    configASSERT( 0 != ulDerBufSize );
+
+    lMbedTLSResult = mbedtls_pk_parse_key( pxEcdsaContext,
+                                           pxDerKey,
+                                           ulDerBufSize,
+                                           NULL,
+                                           0 );
+    TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to parse the imported ECDSA private key." );
+    vPortFree( pxKeyPair );
+    vPortFree( pxDerKey );
 }
-
+static void prvExtractECPublicKeyCleanup();
 
 static CK_RV prvDestroyTestCredentials( void )
 {
@@ -1774,16 +1751,13 @@ TEST( Full_PKCS11_EC, AFQP_Sign )
     CK_OBJECT_HANDLE xPrivateKeyHandle = CK_INVALID_HANDLE;
     CK_OBJECT_HANDLE xPublicKeyHandle = CK_INVALID_HANDLE;
     CK_OBJECT_HANDLE xCertificateHandle = CK_INVALID_HANDLE;
-    uint32_t ulDerBufSize = 200;
-    CK_BYTE_PTR pxDerKey = NULL;
 
     /* Note that ECDSA operations on a signature of all 0's is not permitted. */
     CK_BYTE xHashedMessage[ pkcs11SHA256_DIGEST_LENGTH ] = { 0xab };
     CK_MECHANISM xMechanism;
     CK_BYTE xSignature[ pkcs11RSA_2048_SIGNATURE_LENGTH ] = { 0 };
     CK_ULONG xSignatureLength;
-    CK_BYTE * pxPublicKey = NULL;
-    CK_ATTRIBUTE xPubKeyQuery = { CKA_EC_POINT, NULL, 0 }; 
+    int lMbedTLSResult;
 
     /* Find objects that were previously created. This test case should be run if
      * there are objects that exists under known labels. This test case is not 
@@ -1808,65 +1782,11 @@ TEST( Full_PKCS11_EC, AFQP_Sign )
     TEST_ASSERT_EQUAL_MESSAGE( CKR_OK, xResult, "Failed to ECDSA Sign." );
     TEST_ASSERT_EQUAL_MESSAGE( pkcs11ECDSA_P256_SIGNATURE_LENGTH, xSignatureLength, "ECDSA Sign should return needed signature buffer length when pucSignature is NULL." );
 
-
-    /* Verify the signature with mbedTLS */
-    int lMbedTLSResult;
-
     mbedtls_pk_context xEcdsaContext;
-    mbedtls_pk_init( &xEcdsaContext );
-    
-    /* Reconstruct public key from EC Params. */
-    mbedtls_ecp_keypair * pxKeyPair;
-    /* Initialize the info. */
-    xEcdsaContext.pk_info = &mbedtls_eckey_info;
-
-    /* Initialize the context. */
-    xEcdsaContext.pk_ctx = pxKeyPair;
-    pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
-    mbedtls_ecp_keypair_init( pxKeyPair );
-    mbedtls_ecp_group_init( &pxKeyPair->grp );
-
-    /* At this time, only P-256 curves are supported. */
-    lMbedTLSResult = mbedtls_ecp_group_load( &pxKeyPair->grp,
-                                             MBEDTLS_ECP_DP_SECP256R1 );
-    configASSERT( 0 == lMbedTLSResult );
-
-    /* Get public key from PKCS #11 stack. */
-    xResult = pxGlobalFunctionList->C_GetAttributeValue( xGlobalSession, xPublicKeyHandle, &xPubKeyQuery, 1 );
-    TEST_ASSERT_EQUAL_MESSAGE( CKR_OK, xResult, "Failed to query for public key length" );
-    TEST_ASSERT_NOT_EQUAL_MESSAGE( 0, xPubKeyQuery.ulValueLen, "The size of the public key was an unexpected value." );
-
-    pxPublicKey = pvPortMalloc( xPubKeyQuery.ulValueLen );
-    TEST_ASSERT_NOT_EQUAL_MESSAGE( NULL, pxPublicKey, "Failed to allocate space for public key." );
-
-
-    xPubKeyQuery.pValue = pxPublicKey;
-    xResult = pxGlobalFunctionList->C_GetAttributeValue( xGlobalSession, xPublicKeyHandle, &xPubKeyQuery, 1 );
-    TEST_ASSERT_EQUAL_MESSAGE( CKR_OK, xResult, "Failed to query for public key length" );
-    TEST_ASSERT_NOT_EQUAL_MESSAGE( 0, xPubKeyQuery.ulValueLen, "The size of the public key was an unexpected value." );
-
-    lMbedTLSResult = mbedtls_ecp_point_read_binary( &pxKeyPair->grp,
-                                                 &pxKeyPair->Q,
-                                                 xPubKeyQuery.pValue,
-                                                 xPubKeyQuery.ulValueLen );
-    configASSERT( 0 == lMbedTLSResult );
-    pxDerKey = pvPortMalloc( ulDerBufSize );
-
-    configASSERT( NULL != pxDerKey  );
-
-    ulDerBufSize = mbedtls_pk_write_pubkey_der( &xEcdsaContext, pxDerKey, ulDerBufSize );
-    configASSERT( 0 != ulDerBufSize );
-
-
+    prvExtractECPublicKeyIntoMbedTLSCtx( &xEcdsaContext, xPublicKeyHandle ); 
 
     if( TEST_PROTECT() )
     {
-        lMbedTLSResult = mbedtls_pk_parse_key( &xEcdsaContext,
-                                               pxDerKey,
-                                               ulDerBufSize,
-                                               NULL,
-                                               0 );
-        TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to parse the imported ECDSA private key." );
 
         mbedtls_ecp_keypair * pxEcdsaContext = ( mbedtls_ecp_keypair * ) xEcdsaContext.pk_ctx;
         /* An ECDSA signature is comprised of 2 components - R & S. */

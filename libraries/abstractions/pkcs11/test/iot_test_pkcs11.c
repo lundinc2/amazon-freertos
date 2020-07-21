@@ -459,17 +459,20 @@ static CK_RV prvExtractECPublicKeyIntoMbedTLSCtx( mbedtls_pk_context * pxEcdsaCo
 
     configASSERT( NULL != pxDerKey  );
 
-    ulDerBufSize = mbedtls_pk_write_pubkey_der( pxEcdsaContext, pxDerKey, ulDerBufSize );
+   /*  ulDerBufSize = mbedtls_pk_write_pubkey_der( pxEcdsaContext, pxDerKey, ulDerBufSize );
     configASSERT( 0 != ulDerBufSize );
+    */
 
-    lMbedTLSResult = mbedtls_pk_parse_key( pxEcdsaContext,
+/*    lMbedTLSResult = mbedtls_pk_parse_key( pxEcdsaContext,
                                            pxDerKey,
                                            ulDerBufSize,
                                            NULL,
                                            0 );
     TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to parse the imported ECDSA private key." );
+    */
     vPortFree( pxKeyPair );
     vPortFree( pxDerKey );
+    vPortFree( pxPublicKey );
 }
 static void prvExtractECPublicKeyCleanup();
 

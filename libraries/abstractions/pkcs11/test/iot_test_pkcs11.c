@@ -119,7 +119,7 @@ TEST_GROUP( Full_PKCS11_RSA );
 /* The EC test group is for tests that require elliptic curve keys. */
 TEST_GROUP( Full_PKCS11_EC );
 
-#define PKCS11_TEST_MEMORY_LEAK
+/* #define PKCS11_TEST_MEMORY_LEAK */
 #ifdef PKCS11_TEST_MEMORY_LEAK
     BaseType_t xHeapBefore;
     BaseType_t xHeapAfter;
@@ -281,23 +281,26 @@ TEST_GROUP_RUNNER( Full_PKCS11_RSA )
 {
     #if ( pkcs11testRSA_KEY_SUPPORT == 1 )
         prvBeforeRunningTests();
-        #if ( pkcs11testPREPROVISIONED_SUPPORT != 1 )
+        #if ( pkcs11testIMPORT_PRIVATE_KEY_SUPPORT == 1) 
             RUN_TEST_CASE( Full_PKCS11_RSA, AFQP_CreateObject );
         #endif
 
-        /* Generating RSA keys is not supported. */
-        /* RUN_TEST_CASE( Full_PKCS11_RSA, AFQP_GenerateKeyPair ); */ 
-        /* The find test case must always be run before the rest of the test
-         * suite, otherwise the preceding test cases will not have the necessary
-         * object handles. */
+        /* Generating RSA keys is not currently supported.
+            #if ( pkcs11testGENERATE_KEYPAIR_SUPPORT == 1 )
+             RUN_TEST_CASE( Full_PKCS11_RSA, AFQP_GenerateKeyPair ); 
+            #endif
+         */
+
         RUN_TEST_CASE( Full_PKCS11_RSA, AFQP_FindObject );
         RUN_TEST_CASE( Full_PKCS11_RSA, AFQP_FindObjectMultiThread );
         RUN_TEST_CASE( Full_PKCS11_RSA, AFQP_GetAttributeValue );
-            RUN_TEST_CASE( Full_PKCS11_RSA, AFQP_Sign );
+        RUN_TEST_CASE( Full_PKCS11_RSA, AFQP_Sign );
+
         #if ( pkcs11testPREPROVISIONED_SUPPORT != 1 )
             /* Always destroy objects last. */
             RUN_TEST_CASE( Full_PKCS11_RSA, AFQP_DestroyObject );
         #endif
+
         #if ( pkcs11testIMPORT_PRIVATE_KEY_SUPPORT == 1 )
             prvAfterRunningTests_Object();
         #endif
@@ -348,9 +351,10 @@ TEST_GROUP_RUNNER( Full_PKCS11_EC )
             RUN_TEST_CASE( Full_PKCS11_EC, AFQP_GenerateKeyPair );
         #endif
 
-        /* Always run this case after AFQP_GenerateKeyPair for ports that support
-         * both, so that the test cases after can use the known EC credentials 
-         * for validation. */
+        /* Always run AFQP_CreateObject after AFQP_GenerateKeyPair if the port
+         * supports both. Ports that support object importing have extra checks
+         * as the contents of the private key and public key are well known.
+         */
         #if ( pkcs11testIMPORT_PRIVATE_KEY_SUPPORT == 1 )
             RUN_TEST_CASE( Full_PKCS11_EC, AFQP_CreateObject );
         #endif
@@ -364,11 +368,11 @@ TEST_GROUP_RUNNER( Full_PKCS11_EC )
         RUN_TEST_CASE( Full_PKCS11_EC, AFQP_GetAttributeValueMultiThread );
         RUN_TEST_CASE( Full_PKCS11_EC, AFQP_SignVerifyMultiThread );
 
-        #if ( pkcs11testIMPORT_PRIVATE_KEY_SUPPORT == 1 )
+        #if ( pkcs11testPREPROVISIONED_SUPPORT != 1 )
             RUN_TEST_CASE( Full_PKCS11_EC, AFQP_DestroyObject );
         #endif
 
-        #if ( pkcs11testPREPROVISIONED_SUPPORT != 1 )
+        #if ( pkcs11testIMPORT_PRIVATE_KEY_SUPPORT != 1 )
             prvAfterRunningTests_Object();
         #endif
     #endif /* if ( pkcs11testEC_KEY_SUPPORT == 1 ) */
@@ -404,12 +408,16 @@ static MultithreadTaskParams_t xGlobalTaskParams[ pkcs11testMULTI_THREAD_TASK_CO
 
 
 /* Helper function to extract the EC public key from PKCS #11 and put it in an 
- * mbedTLS context. This function will handle all initialization and memory allocation.
- * Cleanup will occur by calling prvExtractECPublicKeyCleanup */
+ * mbed TLS context. This is done in order to use the mbed TLS stack for checking
+ * the expected behavior of the PKCS #11 module.
+ *
+ * @warning This function will initialize a mbedtls_pk_context. It is import to
+ * free this context with a call to mbedtls_pk_free once done using the mbed TLS 
+ * context.
+ */
 static CK_RV prvExtractECPublicKeyIntoMbedTLSCtx( mbedtls_pk_context * pxEcdsaContext,
                                  CK_OBJECT_HANDLE xPublicKeyHandle )
 {
-    /* Verify the signature with mbedTLS */
     int lMbedTLSResult;
     CK_RV xResult = CKR_OK;
     uint32_t ulDerBufSize = 200;

@@ -66,7 +66,7 @@
 
 /** Enable PKCS#11 Debugging Messages */
 #ifndef PKCS11_DEBUG_ENABLE
-#define PKCS11_DEBUG_ENABLE             1
+#define PKCS11_DEBUG_ENABLE             0
 #endif
 
 /** Use Static or Dynamic Allocation */
@@ -77,7 +77,7 @@
 /** Use a compiled configuration rather than loading from a filestore */
 #ifndef PKCS11_USE_STATIC_CONFIG
 #define PKCS11_USE_STATIC_CONFIG        1
-
+#endif
 
 /** Maximum number of slots allowed in the system - if static memory this will
    always be the number of slots */

@@ -422,7 +422,7 @@ static CK_RV prvExtractECPublicKeyIntoMbedTLSCtx( mbedtls_pk_context * pxEcdsaCo
     CK_RV xResult = CKR_OK;
     uint32_t ulDerBufSize = 200;
     CK_BYTE_PTR pxDerKey = NULL;
-    CK_ATTRIBUTE xPubKeyQuery = { CKA_EC_POINT, NULL, 0 }; 
+    CK_ATTRIBUTE xPubKeyQuery = { CKA_PUBLIC_KEY_INFO, NULL, 0 }; 
     CK_BYTE * pxPublicKey = NULL;
 
     mbedtls_pk_init( pxEcdsaContext );
@@ -460,24 +460,24 @@ static CK_RV prvExtractECPublicKeyIntoMbedTLSCtx( mbedtls_pk_context * pxEcdsaCo
 
     lMbedTLSResult = mbedtls_ecp_point_read_binary( &pxKeyPair->grp,
                                                  &pxKeyPair->Q,
-                                                 xPubKeyQuery.pValue,
-                                                 xPubKeyQuery.ulValueLen );
-    configASSERT( 0 == lMbedTLSResult );
+                                                 (( CK_BYTE_PTR ) xPubKeyQuery.pValue),
+                                                 xPubKeyQuery.ulValueLen -2 );
+    TEST_ASSERT_EQUAL_MESSAGE( 0,  lMbedTLSResult, "mbedTLS failed to parse the imported ECDSA private key." );
     pxDerKey = pvPortMalloc( ulDerBufSize );
 
-    configASSERT( NULL != pxDerKey  );
+    TEST_ASSERT_NOT_EQUAL_MESSAGE( NULL,  pxDerKey, "mbedTLS failed to parse the imported ECDSA private key." );
 
-   /*  ulDerBufSize = mbedtls_pk_write_pubkey_der( pxEcdsaContext, pxDerKey, ulDerBufSize );
-    configASSERT( 0 != ulDerBufSize );
-    */
+    ulDerBufSize = mbedtls_pk_write_pubkey_der( pxEcdsaContext, pxDerKey, ulDerBufSize );
+    TEST_ASSERT_EQUAL_MESSAGE( 0,  ulDerBufSize, "mbedTLS failed to parse the imported ECDSA private key." );
+    
 
-/*    lMbedTLSResult = mbedtls_pk_parse_key( pxEcdsaContext,
+    lMbedTLSResult = mbedtls_pk_parse_key( pxEcdsaContext,
                                            pxDerKey,
                                            ulDerBufSize,
                                            NULL,
                                            0 );
     TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to parse the imported ECDSA private key." );
-    */
+   
     vPortFree( pxKeyPair );
     vPortFree( pxDerKey );
     vPortFree( pxPublicKey );

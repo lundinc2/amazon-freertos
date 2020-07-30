@@ -420,45 +420,6 @@ static CK_RV prvExtractECPublicKeyIntoMbedTLSCtx( mbedtls_pk_context * pxEcdsaCo
 {
     int lMbedTLSResult;
     CK_RV xResult = CKR_OK;
-    uint32_t ulDerBufSize = 200;
-    CK_BYTE_PTR pxDerKey = NULL;
-    CK_ATTRIBUTE xPubKeyQuery = { CKA_EC_POINT, NULL, 0 }; 
-    CK_BYTE * pxPublicKey = NULL;
-    mbedtls_pk_init( pxEcdsaContext );
-    
-    /* Reconstruct public key from EC Params. */
-    mbedtls_ecp_keypair * pxKeyPair;
-    pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
-    /* Initialize the info. */
-    pxEcdsaContext->pk_info = &mbedtls_eckey_info;
-    mbedtls_ecp_keypair_init( pxKeyPair );
-    mbedtls_ecp_group_init( &pxKeyPair->grp );
-    lMbedTLSResult = mbedtls_ecp_group_load( &pxKeyPair->grp,
-                                             MBEDTLS_ECP_DP_SECP256R1 );
-    TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "Failed to load EC group." );
-
-    /* Initialize the context. */
-    pxEcdsaContext->pk_ctx = pxKeyPair;
-
-    /* Get public key from PKCS #11 stack. */
-    xResult = pxGlobalFunctionList->C_GetAttributeValue( xGlobalSession, xPublicKeyHandle, &xPubKeyQuery, 1 );
-    TEST_ASSERT_EQUAL_MESSAGE( CKR_OK, xResult, "Failed to query for public key length" );
-    TEST_ASSERT_NOT_EQUAL_MESSAGE( 0, xPubKeyQuery.ulValueLen, "The size of the public key was an unexpected value." );
-
-    pxPublicKey = pvPortMalloc( xPubKeyQuery.ulValueLen );
-    TEST_ASSERT_NOT_EQUAL_MESSAGE( NULL, pxPublicKey, "Failed to allocate space for public key." );
-
-
-    xPubKeyQuery.pValue = pxPublicKey;
-    xResult = pxGlobalFunctionList->C_GetAttributeValue( xGlobalSession, xPublicKeyHandle, &xPubKeyQuery, 1 );
-    TEST_ASSERT_EQUAL_MESSAGE( CKR_OK, xResult, "Failed to query for public key length" );
-    TEST_ASSERT_NOT_EQUAL_MESSAGE( 0, xPubKeyQuery.ulValueLen, "The size of the public key was an unexpected value." );
-
-    mbedtls_ecp_point_read_binary(&pxKeyPair->grp, 
-            &pxKeyPair->Q, 
-            (uint8_t * )(xPubKeyQuery.pValue), 
-            xPubKeyQuery.ulValueLen );
-    TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to read binary point." );
 
     /*
     lMbedTLSResult = mbedtls_pk_parse_public_key( pxEcdsaContext,
@@ -1783,7 +1744,48 @@ TEST( Full_PKCS11_EC, AFQP_Sign )
     TEST_ASSERT_EQUAL_MESSAGE( pkcs11ECDSA_P256_SIGNATURE_LENGTH, xSignatureLength, "ECDSA Sign should return needed signature buffer length when pucSignature is NULL." );
 
     mbedtls_pk_context xEcdsaContext;
-    prvExtractECPublicKeyIntoMbedTLSCtx( &xEcdsaContext, xPublicKeyHandle ); 
+    //prvExtractECPublicKeyIntoMbedTLSCtx( &xEcdsaContext, xPublicKeyHandle ); 
+    mbedtls_pk_context * pxEcdsaContext = &xEcdsaContext;
+    uint32_t ulDerBufSize = 200;
+    CK_BYTE_PTR pxDerKey = NULL;
+    CK_ATTRIBUTE xPubKeyQuery = { CKA_EC_POINT, NULL, 0 }; 
+    CK_BYTE * pxPublicKey = NULL;
+    mbedtls_pk_init( pxEcdsaContext );
+    
+    /* Reconstruct public key from EC Params. */
+    mbedtls_ecp_keypair * pxKeyPair;
+    pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
+    /* Initialize the info. */
+    pxEcdsaContext->pk_info = &mbedtls_eckey_info;
+    mbedtls_ecp_keypair_init( pxKeyPair );
+    mbedtls_ecp_group_init( &pxKeyPair->grp );
+    lMbedTLSResult = mbedtls_ecp_group_load( &pxKeyPair->grp,
+                                             MBEDTLS_ECP_DP_SECP256R1 );
+    TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "Failed to load EC group." );
+
+    /* Initialize the context. */
+    pxEcdsaContext->pk_ctx = pxKeyPair;
+
+    /* Get public key from PKCS #11 stack. */
+    xResult = pxGlobalFunctionList->C_GetAttributeValue( xGlobalSession, xPublicKeyHandle, &xPubKeyQuery, 1 );
+    TEST_ASSERT_EQUAL_MESSAGE( CKR_OK, xResult, "Failed to query for public key length" );
+    TEST_ASSERT_NOT_EQUAL_MESSAGE( 0, xPubKeyQuery.ulValueLen, "The size of the public key was an unexpected value." );
+
+    pxPublicKey = pvPortMalloc( xPubKeyQuery.ulValueLen );
+    TEST_ASSERT_NOT_EQUAL_MESSAGE( NULL, pxPublicKey, "Failed to allocate space for public key." );
+
+
+    xPubKeyQuery.pValue = pxPublicKey;
+    xResult = pxGlobalFunctionList->C_GetAttributeValue( xGlobalSession, xPublicKeyHandle, &xPubKeyQuery, 1 );
+    TEST_ASSERT_EQUAL_MESSAGE( CKR_OK, xResult, "Failed to query for public key length" );
+    TEST_ASSERT_NOT_EQUAL_MESSAGE( 0, xPubKeyQuery.ulValueLen, "The size of the public key was an unexpected value." );
+
+    /* Strip the ANS.1 Encoding of type and length. */
+    lMbedTLSResult = mbedtls_ecp_point_read_binary(&pxKeyPair->grp, 
+            &pxKeyPair->Q, 
+            (uint8_t * )(xPubKeyQuery.pValue) + 2, 
+            xPubKeyQuery.ulValueLen -2 );
+    TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to read binary point." );
 
     if( TEST_PROTECT() )
     {

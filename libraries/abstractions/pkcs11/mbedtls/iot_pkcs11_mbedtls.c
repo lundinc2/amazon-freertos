@@ -2845,17 +2845,17 @@ CK_DECLARE_FUNCTION( CK_RV, C_GetAttributeValue )( CK_SESSION_HANDLE hSession,
                     else
                     {
                         pxKeyPair = ( mbedtls_ecp_keypair * ) xKeyContext.pk_ctx;
-                        //*( ( uint8_t * ) pTemplate[ iAttrib ].pValue ) = 0x04; /* Mark the point as uncompressed. */
+                        *( ( uint8_t * ) pTemplate[ iAttrib ].pValue ) = 0x04; /* Mark the point as uncompressed. */
 
                         /* Copy xSize value to avoid casting a CK_ULONG size pointer
                          * to a size_t sized pointer. */
                         xMbedSize = xSize;
-                        lMbedTLSResult = mbedtls_ecp_point_write_binary( &pxKeyPair->grp,
+                        lMbedTLSResult = mbedtls_ecp_tls_write_point( &pxKeyPair->grp,
                                                                       &pxKeyPair->Q,
                                                                       MBEDTLS_ECP_PF_UNCOMPRESSED,
                                                                       &xMbedSize,
-                                                                      ( uint8_t * ) pTemplate[ iAttrib ].pValue,
-                                                                      pTemplate[ iAttrib ].ulValueLen );
+                                                                      ( uint8_t * ) pTemplate[ iAttrib ].pValue + 1,
+                                                                      pTemplate[ iAttrib ].ulValueLen - 1 );
                         xSize = xMbedSize;
 
                         if( lMbedTLSResult < 0 )

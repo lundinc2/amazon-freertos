@@ -422,27 +422,23 @@ static CK_RV prvExtractECPublicKeyIntoMbedTLSCtx( mbedtls_pk_context * pxEcdsaCo
     CK_RV xResult = CKR_OK;
     uint32_t ulDerBufSize = 200;
     CK_BYTE_PTR pxDerKey = NULL;
-    CK_ATTRIBUTE xPubKeyQuery = { CKA_PUBLIC_KEY_INFO, NULL, 0 }; 
+    CK_ATTRIBUTE xPubKeyQuery = { CKA_EC_POINT, NULL, 0 }; 
     CK_BYTE * pxPublicKey = NULL;
-
     mbedtls_pk_init( pxEcdsaContext );
     
     /* Reconstruct public key from EC Params. */
     mbedtls_ecp_keypair * pxKeyPair;
+    pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
     /* Initialize the info. */
     pxEcdsaContext->pk_info = &mbedtls_eckey_info;
+    mbedtls_ecp_keypair_init( pxKeyPair );
+    mbedtls_ecp_group_init( &pxKeyPair->grp );
+    lMbedTLSResult = mbedtls_ecp_group_load( &pxKeyPair->grp,
+                                             MBEDTLS_ECP_DP_SECP256R1 );
+    TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "Failed to load EC group." );
 
     /* Initialize the context. */
     pxEcdsaContext->pk_ctx = pxKeyPair;
-    pxKeyPair = pvPortMalloc( sizeof( mbedtls_ecp_keypair ) );
-
-    mbedtls_ecp_keypair_init( pxKeyPair );
-    mbedtls_ecp_group_init( &pxKeyPair->grp );
-
-    /* At this time, only P-256 curves are supported. */
-    lMbedTLSResult = mbedtls_ecp_group_load( &pxKeyPair->grp,
-                                             MBEDTLS_ECP_DP_SECP256R1 );
-    configASSERT( 0 == lMbedTLSResult );
 
     /* Get public key from PKCS #11 stack. */
     xResult = pxGlobalFunctionList->C_GetAttributeValue( xGlobalSession, xPublicKeyHandle, &xPubKeyQuery, 1 );
@@ -458,31 +454,24 @@ static CK_RV prvExtractECPublicKeyIntoMbedTLSCtx( mbedtls_pk_context * pxEcdsaCo
     TEST_ASSERT_EQUAL_MESSAGE( CKR_OK, xResult, "Failed to query for public key length" );
     TEST_ASSERT_NOT_EQUAL_MESSAGE( 0, xPubKeyQuery.ulValueLen, "The size of the public key was an unexpected value." );
 
-    lMbedTLSResult = mbedtls_ecp_point_read_binary( &pxKeyPair->grp,
-                                                 &pxKeyPair->Q,
-                                                 (( CK_BYTE_PTR ) xPubKeyQuery.pValue),
-                                                 xPubKeyQuery.ulValueLen -2 );
-    TEST_ASSERT_EQUAL_MESSAGE( 0,  lMbedTLSResult, "mbedTLS failed to parse the imported ECDSA private key." );
-    pxDerKey = pvPortMalloc( ulDerBufSize );
+    mbedtls_ecp_point_read_binary(&pxKeyPair->grp, 
+            &pxKeyPair->Q, 
+            (uint8_t * )(xPubKeyQuery.pValue), 
+            xPubKeyQuery.ulValueLen );
+    TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to read binary point." );
 
-    TEST_ASSERT_NOT_EQUAL_MESSAGE( NULL,  pxDerKey, "mbedTLS failed to parse the imported ECDSA private key." );
-
-    ulDerBufSize = mbedtls_pk_write_pubkey_der( pxEcdsaContext, pxDerKey, ulDerBufSize );
-    TEST_ASSERT_EQUAL_MESSAGE( 0,  ulDerBufSize, "mbedTLS failed to parse the imported ECDSA private key." );
-    
-
-    lMbedTLSResult = mbedtls_pk_parse_key( pxEcdsaContext,
-                                           pxDerKey,
-                                           ulDerBufSize,
+    /*
+    lMbedTLSResult = mbedtls_pk_parse_public_key( pxEcdsaContext,
+                                           (uint8_t * )(xPubKeyQuery.pValue) + 56,
+                                           xPubKeyQuery.ulValueLen - 56,
                                            NULL,
                                            0 );
-    TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to parse the imported ECDSA private key." );
+    TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to parse the imported ECDSA private key." ); */
    
-    vPortFree( pxKeyPair );
-    vPortFree( pxDerKey );
-    vPortFree( pxPublicKey );
+    //  vPortFree( pxKeyPair );
+    //  vPortFree( pxDerKey );
+    //  vPortFree( pxPublicKey );
 }
-static void prvExtractECPublicKeyCleanup();
 
 static CK_RV prvDestroyTestCredentials( void )
 {
@@ -1806,8 +1795,11 @@ TEST( Full_PKCS11_EC, AFQP_Sign )
         mbedtls_mpi_init( &xR );
         mbedtls_mpi_init( &xS );
         lMbedTLSResult = mbedtls_mpi_read_binary( &xR, &xSignature[ 0 ], 32 );
+        TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to verify signature." );
         lMbedTLSResult = mbedtls_mpi_read_binary( &xS, &xSignature[ 32 ], 32 );
+        TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to verify signature." );
         lMbedTLSResult = mbedtls_ecdsa_verify( &pxEcdsaContext->grp, xHashedMessage, sizeof( xHashedMessage ), &pxEcdsaContext->Q, &xR, &xS );
+        TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to verify signature." );
         mbedtls_mpi_free( &xR );
         mbedtls_mpi_free( &xS );
         TEST_ASSERT_EQUAL_MESSAGE( 0, lMbedTLSResult, "mbedTLS failed to verify signature." );

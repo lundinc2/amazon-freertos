@@ -3,7 +3,7 @@
  *
  * \brief  Microchip Crypto Auth hardware interface object
  *
- * \copyright (c) 2015-2018 Microchip Technology Inc. and its subsidiaries.
+ * \copyright (c) 2015-2020 Microchip Technology Inc. and its subsidiaries.
  *
  * \page License
  *
@@ -28,6 +28,7 @@
 
 #ifndef ATCA_IFACE_H
 #define ATCA_IFACE_H
+/*lint +flb */
 
 /** \defgroup interface ATCAIface (atca_)
  *  \brief Abstract interface to all CryptoAuth device types.  This interface
@@ -39,7 +40,9 @@
 extern "C" {
 #endif
 
-#include "atca_command.h"
+#include "atca_devtypes.h"
+#include <stdint.h>
+#include "atca_status.h"
 
 typedef enum
 {
@@ -50,8 +53,20 @@ typedef enum
     ATCA_HID_IFACE,
     ATCA_CUSTOM_IFACE,
     // additional physical interface types here
-    ATCA_UNKNOWN_IFACE,
+    ATCA_UNKNOWN_IFACE
 } ATCAIfaceType;
+
+
+/*The types are used within the kit protocol to identify the correct interface*/
+typedef enum
+{   ATCA_KIT_AUTO_IFACE,        //Selects the first device if the Kit interface is not defined
+    ATCA_KIT_I2C_IFACE,
+    ATCA_KIT_SWI_IFACE,
+    ATCA_KIT_SPI_IFACE,
+    ATCA_KIT_UNKNOWN_IFACE
+} ATCAKitType;
+
+
 
 /* ATCAIfaceCfg is a mediator object between a completely abstract notion of a
    physical interface and an actual physical interface.
@@ -71,19 +86,26 @@ typedef struct
 
     union                           // each instance of an iface cfg defines a single type of interface
     {
-        struct ATCAI2C
+        struct
         {
             uint8_t  slave_address; // 8-bit slave address
             uint8_t  bus;           // logical i2c bus number, 0-based - HAL will map this to a pin pair for SDA SCL
             uint32_t baud;          // typically 400000
         } atcai2c;
 
-        struct ATCASWI
+        struct
         {
             uint8_t bus;        // logical SWI bus - HAL will map this to a pin	or uart port
         } atcaswi;
 
-        struct ATCAUART
+        struct
+        {
+            uint8_t  bus;           // logical i2c bus number, 0-based - HAL will map this to a spi pheripheral
+            uint8_t  select_pin;    // CS pin line typically 0
+            uint32_t baud;          // typically 16000000
+        } atcaspi;
+
+        struct
         {
             int      port;      // logic port number
             uint32_t baud;      // typically 115200
@@ -92,21 +114,22 @@ typedef struct
             uint8_t  stopbits;  // 0,1,2
         } atcauart;
 
-        struct ATCAHID
+        struct
         {
-            int      idx;           // HID enumeration index
-            uint32_t vid;           // Vendor ID of kit (0x03EB for CK101)
-            uint32_t pid;           // Product ID of kit (0x2312 for CK101)
-            uint32_t packetsize;    // Size of the USB packet
-            uint8_t  guid[16];      // The GUID for this HID device
+            int         idx;           // HID enumeration index
+            ATCAKitType dev_interface; // Kit interface type
+            uint8_t     dev_identity;  // I2C address for the I2C interface device or the bus number for the SWI interface device.
+            uint32_t    vid;           // Vendor ID of kit (0x03EB for CK101)
+            uint32_t    pid;           // Product ID of kit (0x2312 for CK101)
+            uint32_t    packetsize;    // Size of the USB packet
         } atcahid;
 
-        struct ATCACUSTOM
+        struct
         {
             ATCA_STATUS (*halinit)(void *hal, void *cfg);
             ATCA_STATUS (*halpostinit)(void *iface);
-            ATCA_STATUS (*halsend)(void *iface, uint8_t *txdata, int txlength);
-            ATCA_STATUS (*halreceive)(void *iface, uint8_t* rxdata, uint16_t* rxlength);
+            ATCA_STATUS (*halsend)(void *iface, uint8_t word_address, uint8_t *txdata, int txlength);
+            ATCA_STATUS (*halreceive)(void *iface, uint8_t word_address, uint8_t* rxdata, uint16_t* rxlength);
             ATCA_STATUS (*halwake)(void *iface);
             ATCA_STATUS (*halidle)(void *iface);
             ATCA_STATUS (*halsleep)(void *iface);
@@ -133,8 +156,8 @@ struct atca_iface
 
     ATCA_STATUS (*atinit)(void *hal, ATCAIfaceCfg *);
     ATCA_STATUS (*atpostinit)(ATCAIface hal);
-    ATCA_STATUS (*atsend)(ATCAIface hal, uint8_t *txdata, int txlength);
-    ATCA_STATUS (*atreceive)(ATCAIface hal, uint8_t *rxdata, uint16_t *rxlength);
+    ATCA_STATUS (*atsend)(ATCAIface hal, uint8_t word_address, uint8_t *txdata, int txlength);
+    ATCA_STATUS (*atreceive)(ATCAIface hal, uint8_t word_address, uint8_t *rxdata, uint16_t *rxlength);
     ATCA_STATUS (*atwake)(ATCAIface hal);
     ATCA_STATUS (*atidle)(ATCAIface hal);
     ATCA_STATUS (*atsleep)(ATCAIface hal);
@@ -152,8 +175,8 @@ void deleteATCAIface(ATCAIface *ca_iface);
 // IFace methods
 ATCA_STATUS atinit(ATCAIface ca_iface);
 ATCA_STATUS atpostinit(ATCAIface ca_iface);
-ATCA_STATUS atsend(ATCAIface ca_iface, uint8_t *txdata, int txlength);
-ATCA_STATUS atreceive(ATCAIface ca_iface, uint8_t *rxdata, uint16_t *rxlength);
+ATCA_STATUS atsend(ATCAIface ca_iface, uint8_t word_address, uint8_t *txdata, int txlength);
+ATCA_STATUS atreceive(ATCAIface ca_iface, uint8_t word_address, uint8_t *rxdata, uint16_t *rxlength);
 ATCA_STATUS atwake(ATCAIface ca_iface);
 ATCA_STATUS atidle(ATCAIface ca_iface);
 ATCA_STATUS atsleep(ATCAIface ca_iface);
@@ -166,6 +189,7 @@ void* atgetifacehaldat(ATCAIface ca_iface);
 #ifdef __cplusplus
 }
 #endif
+/*lint -flb*/
 /** @} */
 #endif
 

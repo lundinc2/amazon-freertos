@@ -2,7 +2,7 @@
  * \file
  * \brief ATCA Hardware abstraction layer for Linux using I2C.
  *
- * \copyright (c) 2015-2018 Microchip Technology Inc. and its subsidiaries.
+ * \copyright (c) 2015-2020 Microchip Technology Inc. and its subsidiaries.
  *
  * \page License
  *
@@ -35,15 +35,13 @@
  *
    @{ */
 
-#define MAX_I2C_BUSES   4   // Raspberry Pi has 2 TWI
+#define MAX_I2C_BUSES   2   // Raspberry Pi has 2 TWI
 
 // A structure to hold I2C information
 typedef struct atcaI2Cmaster
 {
     char i2c_file[16];
     int  ref_ct;
-    // for conveniences during interface release phase
-    int bus_index;
 } ATCAI2CMaster_t;
 
 /** @} */

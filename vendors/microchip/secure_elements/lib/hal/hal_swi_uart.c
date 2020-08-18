@@ -2,7 +2,7 @@
  * \file
  * \brief ATCA Hardware abstraction layer for SWI over UART drivers.
  *
- * \copyright (c) 2015-2018 Microchip Technology Inc. and its subsidiaries.
+ * \copyright (c) 2015-2020 Microchip Technology Inc. and its subsidiaries.
  *
  * \page License
  *
@@ -30,7 +30,7 @@
 #include "atca_hal.h"
 #include "hal_swi_uart.h"
 #include "atca_device.h"
-#include "atca_execution.h"
+#include "calib/calib_execution.h"
 
 /** \defgroup hal_ Hardware abstraction layer (hal_)
  *
@@ -104,7 +104,7 @@ ATCA_STATUS hal_swi_discover_devices(int bus_num, ATCAIfaceCfg cfg[], int *found
 #endif
     ATCAPacket packet;
     ATCA_STATUS status;
-    uint8_t revs608[][4] = { { 0x00, 0x00, 0x60, 0x01 }, { 0x00, 0x00, 0x60, 0x02 } };
+    uint8_t revs608[][4] = { { 0x00, 0x00, 0x60, 0x01 }, { 0x00, 0x00, 0x60, 0x02 }, { 0x00, 0x00, 0x60, 0x03 } };
     uint8_t revs508[][4] = { { 0x00, 0x00, 0x50, 0x00 } };
     uint8_t revs108[][4] = { { 0x80, 0x00, 0x10, 0x01 } };
     uint8_t revs204[][4] = { { 0x00, 0x02, 0x00, 0x08 }, { 0x00, 0x02, 0x00, 0x09 }, { 0x00, 0x04, 0x05, 0x00 } };
@@ -160,7 +160,7 @@ ATCA_STATUS hal_swi_discover_devices(int bus_num, ATCAIfaceCfg cfg[], int *found
     {
         if (memcmp(&packet.data[1], &revs608[i], 4) == 0)
         {
-            discoverCfg.devtype = ATECC608A;
+            discoverCfg.devtype = ATECC608;
             break;
         }
     }
@@ -296,13 +296,14 @@ ATCA_STATUS hal_swi_send_flag(ATCAIface iface, uint8_t data)
 }
 
 /** \brief HAL implementation of SWI send command over UART
- * \param[in] iface     instance
- * \param[in] txdata    pointer to space to bytes to send
- * \param[in] txlength  number of bytes to send
+ * \param[in] iface         instance
+ * \param[in] word_address  device transaction type
+ * \param[in] txdata        pointer to space to bytes to send
+ * \param[in] txlength      number of bytes to send
  * \return ATCA_SUCCESS on success, otherwise an error code.
  */
 
-ATCA_STATUS hal_swi_send(ATCAIface iface, uint8_t *txdata, int txlength)
+ATCA_STATUS hal_swi_send(ATCAIface iface, uint8_t word_address, uint8_t *txdata, int txlength)
 {
 
 #ifdef DEBUG_HAL
@@ -320,6 +321,7 @@ ATCA_STATUS hal_swi_send(ATCAIface iface, uint8_t *txdata, int txlength)
     printf("CRC    : "); print_array(&txdata[txdata[1] - 1], 2);
     printf("\r\n");
 #endif
+    (void)word_address;
     ATCA_STATUS status = ATCA_SUCCESS;
     ATCAIfaceCfg *cfg = atgetifacecfg(iface);
     uint8_t i, bit_mask, bit_data;
@@ -351,17 +353,19 @@ ATCA_STATUS hal_swi_send(ATCAIface iface, uint8_t *txdata, int txlength)
 }
 
 /** \brief HAL implementation of SWI receive function over UART
- * \param[in]    iface     Device to interact with.
- * \param[out]   rxdata    Data received will be returned here.
- * \param[inout] rxlength  As input, the size of the rxdata buffer.
- *                         As output, the number of bytes received.
+ * \param[in]    iface         Device to interact with.
+ * \param[in]    word_address  device transaction type
+ * \param[out]   rxdata        Data received will be returned here.
+ * \param[in,out] rxlength     As input, the size of the rxdata buffer.
+ *                             As output, the number of bytes received.
  * \return ATCA_SUCCESS on success, otherwise an error code.
  */
-ATCA_STATUS hal_swi_receive(ATCAIface iface, uint8_t *rxdata, uint16_t *rxlength)
+ATCA_STATUS hal_swi_receive(ATCAIface iface, uint8_t word_address, uint8_t *rxdata, uint16_t *rxlength)
 {
 #ifdef DEBUG_HAL
     printf("hal_swi_receive()\r\n");
 #endif
+    (void)word_address;
     ATCA_STATUS status = !ATCA_SUCCESS;
     ATCAIfaceCfg *cfg = atgetifacecfg(iface);
     int bus = cfg->atcaswi.bus;
@@ -510,7 +514,7 @@ ATCA_STATUS hal_swi_wake(ATCAIface iface)
     if (!status)
     {
         atca_delay_us(cfg->wake_delay);  // wait tWHI + tWLO which is configured based on device type and configuration structure
-        status = hal_swi_receive(iface, data, &datalength);
+        status = hal_swi_receive(iface, 0, data, &datalength);
     }
 
     if ((retries == 0x00) && (status != ATCA_SUCCESS) )

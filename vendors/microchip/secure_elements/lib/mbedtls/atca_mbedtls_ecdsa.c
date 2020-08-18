@@ -2,7 +2,7 @@
  * \brief Replace mbedTLS ECDSA Functions with hardware acceleration &
  * hardware key security
  *
- * \copyright (c) 2015-2019 Microchip Technology Inc. and its subsidiaries.
+ * \copyright (c) 2015-2020 Microchip Technology Inc. and its subsidiaries.
  *
  * \page License
  *
@@ -39,7 +39,7 @@
 
 /* Cryptoauthlib Includes */
 #include "cryptoauthlib.h"
-#include "basic/atca_basic.h"
+#include "atca_basic.h"
 #include <string.h>
 
 

@@ -3,7 +3,7 @@
  *
  * \brief  Microchip Crypto Auth device object
  *
- * \copyright (c) 2015-2018 Microchip Technology Inc. and its subsidiaries.
+ * \copyright (c) 2015-2020 Microchip Technology Inc. and its subsidiaries.
  *
  * \page License
  *
@@ -28,6 +28,7 @@
 
 #ifndef ATCA_DEVICE_H
 #define ATCA_DEVICE_H
+/*lint +flb */
 
 #include "atca_command.h"
 #include "atca_iface.h"
@@ -38,9 +39,14 @@
 extern "C" {
 #endif
 
+#ifndef ATCA_NO_PRAGMA_PACK
 #pragma pack(push, 1)
+#define ATCA_PACKED
+#else
+#define ATCA_PACKED     __attribute__ ((packed))
+#endif
 
-typedef struct _atsha204a_config
+typedef struct ATCA_PACKED _atsha204a_config
 {
     uint32_t SN03;
     uint32_t RevNum;
@@ -62,7 +68,7 @@ typedef struct _atsha204a_config
     uint8_t  LockConfig;
 } atsha204a_config_t;
 
-typedef struct _atecc508a_config
+typedef struct ATCA_PACKED _atecc508a_config
 {
     uint32_t SN03;
     uint32_t RevNum;
@@ -89,7 +95,7 @@ typedef struct _atecc508a_config
     uint16_t KeyConfig[16];
 } atecc508a_config_t;
 
-typedef struct _atecc608a_config
+typedef struct ATCA_PACKED _atecc608_config
 {
     uint32_t SN03;
     uint32_t RevNum;
@@ -119,17 +125,25 @@ typedef struct _atecc608a_config
     uint16_t ChipOptions;
     uint32_t X509format;
     uint16_t KeyConfig[16];
-} atecc608a_config_t;
+} atecc608_config_t;
 
+#ifndef ATCA_NO_PRAGMA_PACK
 #pragma pack(pop)
+#endif
 
 /** \brief atca_device is the C object backing ATCADevice.  See the atca_device.h file for
  * details on the ATCADevice methods
  */
 struct atca_device
 {
-    ATCACommand mCommands;  //!< Command set for a given CryptoAuth device
-    ATCAIface   mIface;     //!< Physical interface
+    ATCACommand mCommands;    //!< Command set for a given CryptoAuth device
+    ATCAIface   mIface;       //!< Physical interface
+
+    uint8_t  session_state;   /**< Secure Session State */
+    uint16_t session_counter; /**< Secure Session Message Count */
+    uint16_t session_key_id;  /**< Key ID used for a secure sesison */
+    uint8_t* session_key;     /**< Session Key */
+    uint8_t  session_key_len; /**< Length of key used for the session in bytes */
 };
 
 typedef struct atca_device * ATCADevice;
@@ -278,4 +292,5 @@ ATCAIface atGetIFace(ATCADevice dev);
 #define ATCA_KEY_CONFIG_X509_ID_MASK            (0x03u << ATCA_KEY_CONFIG_X509_ID_SHIFT)
 #define ATCA_KEY_CONFIG_X509_ID(v)              (ATCA_KEY_CONFIG_X509_ID_MASK & (v << ATCA_KEY_CONFIG_X509_ID_SHIFT))
 /** @} */
+/*lint -flb*/
 #endif

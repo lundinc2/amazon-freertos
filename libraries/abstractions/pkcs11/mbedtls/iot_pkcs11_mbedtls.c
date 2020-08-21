@@ -107,7 +107,7 @@ static const char * pNoLowLevelMbedTlsCodeStr = "<No-Low-Level-Code>";
  * @ingroup pkcs11_macros
  * @brief Delay to wait on acquiring a mutex, in ms.
  */
-#define pkcs11MUTEX_WAIT_MS                     ( pdMS_TO_TICKS( 5000U ) )
+#define pkcs11MUTEX_WAIT_MS                     ( pdMS_TO_TICKS( 5000 ) )
 
 /**
  * @ingroup pkcs11_macros
@@ -1094,6 +1094,7 @@ static CK_RV prvDeleteObjectFromList( CK_OBJECT_HANDLE xAppHandle )
     if( xResult == CKR_OK )
     {
         xGotSemaphore = xSemaphoreTake( xP11Context.xObjectList.xMutex, pkcs11MUTEX_WAIT_MS );
+        LogError( ( "bench-mark-before:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
     }
 
     if( xGotSemaphore == pdTRUE )
@@ -1111,6 +1112,7 @@ static CK_RV prvDeleteObjectFromList( CK_OBJECT_HANDLE xAppHandle )
         }
 
         ( void ) xSemaphoreGive( xP11Context.xObjectList.xMutex );
+        LogError( ( "bench-mark-after:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
     }
     else
     {
@@ -1153,6 +1155,7 @@ static CK_RV prvAddObjectToList( CK_OBJECT_HANDLE xPalHandle,
     }
     else if( pdTRUE == xSemaphoreTake( xP11Context.xObjectList.xMutex, pkcs11MUTEX_WAIT_MS ) )
     {
+        LogError( ( "bench-mark-before:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
         for( ulSearchIndex = 0; ulSearchIndex < pkcs11configMAX_NUM_OBJECTS; ulSearchIndex++ )
         {
             if( xResult == CKR_OK )
@@ -1189,6 +1192,7 @@ static CK_RV prvAddObjectToList( CK_OBJECT_HANDLE xPalHandle,
         }
 
         ( void ) xSemaphoreGive( xP11Context.xObjectList.xMutex );
+        LogError( ( "bench-mark-after:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
     }
     else
     {
@@ -1948,6 +1952,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID slotID,
         /* Get next open session slot. */
         if( xSemaphoreTake( xP11Context.xSessionMutex, pkcs11MUTEX_WAIT_MS ) == pdTRUE )
         {
+        LogError( ( "bench-mark-before:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
             for( ulSessionCount = 0; ulSessionCount < pkcs11configMAX_SESSIONS; ++ulSessionCount )
             {
                 /* coverity[misra_c_2012_rule_10_5_violation] */
@@ -1965,6 +1970,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_OpenSession )( CK_SLOT_ID slotID,
                 }
             }
 
+        LogError( ( "bench-mark-after:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
             ( void ) xSemaphoreGive( xP11Context.xSessionMutex );
         }
         else
@@ -3799,6 +3805,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE hSession,
          * is underway on another thread where modification of key would lead to hard fault.*/
         if( pdTRUE == xSemaphoreTake( pxSession->xSignMutex, pkcs11MUTEX_WAIT_MS ) )
         {
+        LogError( ( "bench-mark-before:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
             if( ( pxSession->xSignKeyHandle == CK_INVALID_HANDLE ) || ( pxSession->xSignKeyHandle != hKey ) )
             {
                 pxSession->xSignKeyHandle = CK_INVALID_HANDLE;
@@ -3821,6 +3828,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_SignInit )( CK_SESSION_HANDLE hSession,
                 }
             }
 
+        LogError( ( "bench-mark-after:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
             ( void ) xSemaphoreGive( pxSession->xSignMutex );
 
             /* Key has been parsed into mbedTLS pk structure.
@@ -3990,6 +3998,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Sign )( CK_SESSION_HANDLE hSession,
             {
                 if( pdTRUE == xSemaphoreTake( pxSessionObj->xSignMutex, pkcs11MUTEX_WAIT_MS ) )
                 {
+        LogError( ( "bench-mark-before:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
                     /* Per mbed TLS documentation, if using RSA, md_alg should
                      * be MBEDTLS_MD_NONE. If ECDSA, md_alg should never be
                      * MBEDTLS_MD_NONE. SHA-256 will be used for ECDSA for
@@ -4012,7 +4021,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Sign )( CK_SESSION_HANDLE hSession,
                                     mbedtlsLowLevelCodeOrDefault( lMbedTLSResult ) ) );
                         xResult = CKR_FUNCTION_FAILED;
                     }
-
+        LogError( ( "bench-mark-after:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
                     ( void ) xSemaphoreGive( pxSessionObj->xSignMutex );
                     /* See explanation in prvCheckValidSessionAndModule for this exception. */
                     /* coverity[misra_c_2012_rule_10_5_violation] */
@@ -4163,6 +4172,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_VerifyInit )( CK_SESSION_HANDLE hSession,
     {
         if( pdTRUE == xSemaphoreTake( pxSession->xVerifyMutex, pkcs11MUTEX_WAIT_MS ) )
         {
+        LogError( ( "bench-mark-before:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
             if( ( pxSession->xVerifyKeyHandle == CK_INVALID_HANDLE ) || ( pxSession->xVerifyKeyHandle != hKey ) )
             {
                 pxSession->xVerifyKeyHandle = CK_INVALID_HANDLE;
@@ -4196,6 +4206,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_VerifyInit )( CK_SESSION_HANDLE hSession,
                 }
             }
 
+        LogError( ( "bench-mark-after:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
             ( void ) xSemaphoreGive( pxSession->xVerifyMutex );
             PKCS11_PAL_GetObjectValueCleanup( pucKeyData, ulKeyDataLength );
         }
@@ -4350,6 +4361,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Verify )( CK_SESSION_HANDLE hSession,
         {
             if( pdTRUE == xSemaphoreTake( pxSessionObj->xVerifyMutex, pkcs11MUTEX_WAIT_MS ) )
             {
+        LogError( ( "bench-mark-before:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
                 /* Verify the signature. If a public key is present, use it. */
                 if( NULL != pxSessionObj->xVerifyKey.pk_ctx )
                 {
@@ -4370,6 +4382,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Verify )( CK_SESSION_HANDLE hSession,
                     }
                 }
 
+        LogError( ( "bench-mark-after:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
                 ( void ) xSemaphoreGive( pxSessionObj->xVerifyMutex );
             }
             else
@@ -4416,6 +4429,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Verify )( CK_SESSION_HANDLE hSession,
             {
                 if( pdTRUE == xSemaphoreTake( pxSessionObj->xVerifyMutex, pkcs11MUTEX_WAIT_MS ) )
                 {
+        LogError( ( "bench-mark-before:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
                     /* Verify the signature. If a public key is present, use it. */
                     if( NULL != pxSessionObj->xVerifyKey.pk_ctx )
                     {
@@ -4423,6 +4437,7 @@ CK_DECLARE_FUNCTION( CK_RV, C_Verify )( CK_SESSION_HANDLE hSession,
                         lMbedTLSResult = mbedtls_ecdsa_verify( &pxEcdsaContext->grp, pData, ulDataLen, &pxEcdsaContext->Q, &xR, &xS );
                     }
 
+        LogError( ( "bench-mark-after:%lu", xTaskGetTickCount() / portTICK_RATE_MS ) );
                     ( void ) xSemaphoreGive( pxSessionObj->xVerifyMutex );
 
                     if( lMbedTLSResult != 0 )

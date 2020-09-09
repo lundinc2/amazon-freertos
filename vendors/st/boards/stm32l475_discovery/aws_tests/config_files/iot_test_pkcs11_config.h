@@ -69,7 +69,7 @@
 /*
  * @brief Set to 1 if elliptic curve private keys are supported by the platform.  0 if not.
  */
-#define pkcs11testEC_KEY_SUPPORT                      ( 0 )
+#define pkcs11testEC_KEY_SUPPORT                      ( 1 )
 
 /*
  * @brief Set to 1 if importing device private key via C_CreateObject is supported.  0 if not.

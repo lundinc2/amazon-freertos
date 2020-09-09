@@ -164,6 +164,6 @@
  * Set this to 1 when the host doesn't support ECDSA for network authentication
  * (e.g. in the TLS protocol implementation).
  */
-#define pkcs11configSUPPRESS_ECDSA_MECHANISM               1
+#define pkcs11configSUPPRESS_ECDSA_MECHANISM               0
 
 #endif /* _AWS_PKCS11_CONFIG_H_ include guard. */

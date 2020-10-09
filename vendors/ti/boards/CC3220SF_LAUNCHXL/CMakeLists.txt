@@ -179,12 +179,6 @@ target_include_directories(
         "$<IF:${AFR_IS_TESTING},${AFR_TESTS_DIR},${AFR_DEMOS_DIR}>/include"
         ${compiler_specific_include}
 )
-target_link_libraries(
-    AFR::kernel::mcu_port
-    INTERFACE
-        AFR::posix_headers
-        AFR::posix    
-)
 
 #POSIX
 afr_mcu_port(posix)
@@ -202,6 +196,7 @@ target_include_directories(
 target_link_libraries(
     AFR::posix::mcu_port
     INTERFACE AFR::freertos_plus_posix
+    AFR::posix
 )
 
 # Common I/O, currently only fully supported for GCC
@@ -234,11 +229,18 @@ target_sources(
     AFR::wifi::mcu_port
     INTERFACE "${portable_dir}/wifi/iot_wifi.c"
 )
+target_include_directories(
+    AFR::wifi::mcu_port BEFORE
+    INTERFACE
+      "${AFR_MODULES_ABSTRACTIONS_DIR}/posix/include"
+      "${AFR_MODULES_ABSTRACTIONS_DIR}/posix/include/FreeRTOS_POSIX"
+      "${AFR_MODULES_FREERTOS_PLUS_DIR}/standard/freertos_plus_posix/include"
+)
+
 # WiFi on TI requires POSIX types
 target_link_libraries(
     AFR::wifi::mcu_port
     INTERFACE
-        AFR::posix::mcu_port
         AFR::secure_sockets
 )
 

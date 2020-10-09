@@ -31,7 +31,6 @@
  * @brief Internal structs and initializers for FreeRTOS+POSIX.
  */
 
-
 /* FreeRTOS Includes. */
 #include "iot_doubly_linked_list.h"
 

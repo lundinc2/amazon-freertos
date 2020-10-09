@@ -5,11 +5,17 @@ Users are required to download the full TI SDK for any evaluation and developmen
 For compatibility reasons, please be sure to use the TI SDK versions listed
 below as they have been verified together with Amazon FreeRTOS:
 
-** TI SimpleLink Wi-Fi CC32xx SDK v2.10.00.04: **
-   http://www.ti.com/tool/download/SIMPLELINK-CC3220-SDK/2.10.00.04
+** TI SimpleLink Wi-Fi CC32xx SDK v4.30.00.06: **
+   https://www.ti.com/tool/download/SIMPLELINK-CC32XX-SDK/4.30.00.06
 
-** TI SimpleLink CC13x2 and CC26x2 SDK v4.30: **
-< add link once live >
+** TI SimpleLink CC13x2 and CC26x2 SDK v4.30.00.54: **
+   https://www.ti.com/tool/download/SIMPLELINK-CC13X2-26X2-SDK/4.30.00.54
+
+Depending on the development platform, users might also need to download the
+standalone SysConfig tool if not part if the SDK or IDE download:
+
+** TI System Configuration Tool (SysConfig) v1.6.0: **
+   https://www.ti.com/tool/download/SYSCONFIG/1.6.0_1543
 
 # Common-IO
 
@@ -19,4 +25,30 @@ of the provided common-io ports are device agnostic, some are device specific
 and only available for a given device family.
 
 Available common-io ports are found under "simplelink_common/ports/common-io/src"
-where device agnostic versions are found under the "simplelink" folder. 
+where device agnostic versions are found in the "simplelink" folder. 
+
+# Building AWS Test and Demo projects
+
+The AWS Test and Demo project assumes that the user has installed or linked 
+(symbolic) the SDK into to corresponding device SDK folder, 
+"simplelink_<device>_sdk. These folders could contain multiple SDK version and
+should be named accordingly. For example, if the user is to create a symbolic 
+link for the CC32xx 4.30 SDK, it is recommended to use the following naming 
+scheme:
+
+> C:/ti/simplelink_cc32xx_4_30_00_06_sdk <-- link --> ./simplelink_cc32xx_sdk/4_30_00_06
+
+The user would need to follow the same method for SysConfig, installing it into
+the "sysconfig" directory or linking it like showed done above:
+
+> C:/ti/sysconfig_1.6.0 <-- link --> ./sysconfig/1_6_0
+
+When later invoking the CMake for these projects, the user is expected to define
+the SDK version to use. This allows for the user to easily move between SDK 
+versions without having to manually specify the version in the CMakeFile.
+An example on how these defines could be passed to the cmake call:
+
+cmake ... -DCC32XX_SDK_VER=4_30_00_54 -DSYSCONFIG_VER=1_6_0
+
+If building for the CC13X2 or CC26X2 family, the SDK version is defined by 
+"DCC32XX_SDK_VER" instead of "DCC32XX_SDK_VER".

@@ -42,7 +42,7 @@ if (CMAKE_HOST_SYSTEM_NAME  STREQUAL "Linux")
 else()
     # If not Linux, assume Windows. 
     # The actual "true" variable could for example be WIN32, MINGWm MSYS or CYGWIN
-    # depending on the Windows enviroment used.
+    # depending on the Windows environment used.
     set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.bat")
 endif()
 
@@ -78,9 +78,13 @@ set(sysconfig_files_all
 file(MAKE_DIRECTORY ${sysconfig_out})
 
 # Include IDE specific cmake file.
+if(${AFR_TOOLCHAIN} STREQUAL "gcc")
     include("${CMAKE_CURRENT_LIST_DIR}/gcc.cmake")
     set(compiler_str "gcc")
     include_directories(BEFORE "${simplelink_sdk_dir}/source/ti/posix/gcc")
+elseif(NOT AFR_METADATA_MODE)
+    message( FATAL_ERROR "The toolchain is not supported." )
+endif()
 
 # Setup SysConfig exection dependency
 add_custom_command(OUTPUT ${sysconfig_files_all}
@@ -112,7 +116,7 @@ afr_set_board_metadata(PROGRAM_MEMORY "352KB")
 afr_set_board_metadata(CODE_SIGNER "AmazonFreeRTOS-Default")
 afr_set_board_metadata(SUPPORTED_IDE "CCS")
 afr_set_board_metadata(IDE_CCS_NAME "Code Composer Studio")
-afr_set_board_metadata(IDE_CCS_COMPILER "TI-ARM;GCC")
+afr_set_board_metadata(IDE_CCS_COMPILER "GCC")
 afr_set_board_metadata(KEY_IMPORT_PROVISIONING "TRUE")
 
 # -------------------------------------------------------------------------------------------------
@@ -222,9 +226,6 @@ target_link_libraries(
 # DEPENDS keyword, e.g.,
 # afr_mcu_port(kernel DEPENDS my_board_driver freertos_port)
 
-
-
-
 # Common I/O, currently only fully supported for GCC
 afr_mcu_port(common_io)
 target_sources(
@@ -244,7 +245,7 @@ target_sources(
       "${simplelink_common_src_dir}/ports/common_io/src/simplelink/iot_watchdog.c"
       "${simplelink_common_src_dir}/ports/common_io/src/cc13x2_26x2/iot_hw.c"
       "${simplelink_common_src_dir}/ports/common_io/src/cc13x2_26x2/iot_reset.c"
-      "$<IF:${AFR_IS_TESTING},${simplelink_common_src_dir}/ports/common_io/iot_test_common_io_internal.c,>"
+      "$<IF:${AFR_IS_TESTING},${simplelink_common_src_dir}/ports/common_io/test_internals/${board_dir}/iot_test_common_io_internal.c,>"
 )
 
 target_include_directories(

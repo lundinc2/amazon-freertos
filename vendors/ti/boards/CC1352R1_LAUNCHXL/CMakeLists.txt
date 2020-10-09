@@ -78,9 +78,13 @@ set(sysconfig_files_all
 file(MAKE_DIRECTORY ${sysconfig_out})
 
 # Include IDE specific cmake file.
-include("${CMAKE_CURRENT_LIST_DIR}/gcc.cmake")
-set(compiler_str "gcc")
-include_directories(BEFORE "${simplelink_sdk_dir}/source/ti/posix/gcc")
+if(${AFR_TOOLCHAIN} STREQUAL "gcc")
+    include("${CMAKE_CURRENT_LIST_DIR}/gcc.cmake")
+    set(compiler_str "gcc")
+    include_directories(BEFORE "${simplelink_sdk_dir}/source/ti/posix/gcc")
+elseif(NOT AFR_METADATA_MODE)
+    message( FATAL_ERROR "The toolchain is not supported." )
+endif()
 
 # Setup SysConfig exection dependency
 add_custom_command(OUTPUT ${sysconfig_files_all}
@@ -112,7 +116,7 @@ afr_set_board_metadata(PROGRAM_MEMORY "352KB")
 afr_set_board_metadata(CODE_SIGNER "AmazonFreeRTOS-Default")
 afr_set_board_metadata(SUPPORTED_IDE "CCS")
 afr_set_board_metadata(IDE_CCS_NAME "Code Composer Studio")
-afr_set_board_metadata(IDE_CCS_COMPILER "TI-ARM;GCC")
+afr_set_board_metadata(IDE_CCS_COMPILER "GCC")
 afr_set_board_metadata(KEY_IMPORT_PROVISIONING "TRUE")
 
 # -------------------------------------------------------------------------------------------------

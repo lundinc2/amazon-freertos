@@ -40,7 +40,9 @@
 #include "task.h"
 
 /* AWS System files. */
+#if (testrunnerFULL_WIFI_ENABLED == 1)
 #include "iot_wifi.h"
+#endif
 #include "iot_system_init.h"
 #include "aws_test_runner.h"
 #include "iot_logging_task.h"
@@ -48,8 +50,6 @@
 #include "iot_pkcs11.h"
 
 /* TI-Driver includes. */
-#include <ti/drivers/GPIO.h>
-#include <ti/drivers/SPI.h>
 #include <ti/drivers/net/wifi/simplelink.h>
 
 /* Logging Task Defines. */
@@ -66,9 +66,11 @@
 /* Prototypes */
 
 void vApplicationDaemonTaskStartupHook( void );
+#if (testrunnerFULL_WIFI_ENABLED == 1)
 static void prvWifiConnect( void );
 static CK_RV prvProvisionRootCA( void );
 static void prvShowTiCc3220SecurityAlertCounts( void );
+#endif
 
 /**
  * @brief Performs board and logging initializations, then starts the OS.
@@ -106,16 +108,12 @@ int main( void )
  */
 void vApplicationDaemonTaskStartupHook( void )
 {
-    UART_Handle xtUartHndl;
-    WIFIReturnCode_t xWifiStatus;
-
-    /* Hardware initialization required after the RTOS is running. */
-    GPIO_init();
-    SPI_init();
 
     /* Configure the UART. */
-    xtUartHndl = InitTerm();
-    UART_control( xtUartHndl, UART_CMD_RXDISABLE, NULL );
+    (void)UartTerm_Init();
+
+    #if (testrunnerFULL_WIFI_ENABLED == 1)
+    WIFIReturnCode_t xWifiStatus;
 
     configPRINTF( ( "Starting Wi-Fi Module ...\r\n" ) );
 
@@ -138,10 +136,13 @@ void vApplicationDaemonTaskStartupHook( void )
         {
         }
     }
+    #endif
+
 
     /* Initialize the AWS Libraries system. */
     if( SYSTEM_Init() == pdPASS )
     {
+        #if (testrunnerFULL_WIFI_ENABLED == 1)
         /* A simple example to demonstrate key and certificate provisioning in
          * flash using PKCS#11 interface. This should be replaced
          * by production ready key provisioning mechanism. */
@@ -155,6 +156,7 @@ void vApplicationDaemonTaskStartupHook( void )
          * the device cannot be automatically flashed, but must be reprogrammed with uniflash. This routine is placed 
          * here for debugging purposes. */
         prvShowTiCc3220SecurityAlertCounts();
+        #endif
 
         /* Create the task to run tests. */
         xTaskCreate( TEST_RUNNER_RunTests_task,
@@ -167,8 +169,7 @@ void vApplicationDaemonTaskStartupHook( void )
 }
 /* ----------------------------------------------------------*/
 
-
-
+#if (testrunnerFULL_WIFI_ENABLED == 1)
 /**
  * @brief Imports the trusted Root CA required for a connection to
  * AWS IoT endpoint.
@@ -255,23 +256,6 @@ static void prvWifiConnect( void )
     }
 }
 
-void vApplicationIdleHook( void )
-{
-    static TickType_t xLastPrint = 0;
-    TickType_t xTimeNow;
-    const TickType_t xPrintFrequency = pdMS_TO_TICKS( 2000 );
-
-    xTimeNow = xTaskGetTickCount();
-
-    if( ( xTimeNow - xLastPrint ) > xPrintFrequency )
-    {
-        configPRINT( "." );
-        xLastPrint = xTimeNow;
-    }
-}
-
-/*-----------------------------------------------------------*/
-
 /**
  * @brief In the Texas Instruments CC3220(SF) device, we retrieve the number of security alerts and the threshold.
  */
@@ -290,5 +274,21 @@ static void prvShowTiCc3220SecurityAlertCounts( void )
     else
     {
         configPRINTF( ( "sl_FsCtl failed with error code: %d\r\n", lResult ) );
+    }
+}
+#endif
+
+void vApplicationIdleHook( void )
+{
+    static TickType_t xLastPrint = 0;
+    TickType_t xTimeNow;
+    const TickType_t xPrintFrequency = pdMS_TO_TICKS( 2000 );
+
+    xTimeNow = xTaskGetTickCount();
+
+    if( ( xTimeNow - xLastPrint ) > xPrintFrequency )
+    {
+        configPRINT( "." );
+        xLastPrint = xTimeNow;
     }
 }

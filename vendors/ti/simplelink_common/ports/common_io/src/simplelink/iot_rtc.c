@@ -39,7 +39,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <time.h>
+#include <../include/time.h>
 
 /* Common IO Header */
 #include <iot_rtc.h>

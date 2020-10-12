@@ -39,8 +39,10 @@ set(board_demos_dir "${CMAKE_CURRENT_LIST_DIR}/aws_demos")
 set(board_tests_dir "${CMAKE_CURRENT_LIST_DIR}/aws_tests")
 if (CMAKE_HOST_SYSTEM_NAME  STREQUAL "Linux")
     set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.sh")
+elseif (CMAKE_HOST_SYSTEM_NAME  STREQUAL "Darwin")
+    set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.sh")
 else()
-    # If not Linux, assume Windows. 
+    # If not Linux or macOS, assume Windows. 
     # The actual "true" variable could for example be WIN32, MINGWm MSYS or CYGWIN
     # depending on the Windows environment used.
     set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.bat")
@@ -195,8 +197,9 @@ target_include_directories(
 
 target_link_libraries(
     AFR::posix::mcu_port
-    INTERFACE AFR::freertos_plus_posix
-    AFR::posix
+    INTERFACE 
+        AFR::freertos_plus_posix
+        AFR::posix
 )
 
 # Common I/O, currently only fully supported for GCC
@@ -219,6 +222,7 @@ target_sources(
 target_include_directories(
     AFR::common_io::mcu_port
     INTERFACE
+      ${compiler_specific_include}
       "${sysconfig_out}"
       "${AFR_MODULES_ABSTRACTIONS_DIR}/common_io/include"
 )
@@ -227,17 +231,23 @@ target_include_directories(
 afr_mcu_port(wifi)
 target_sources(
     AFR::wifi::mcu_port
-    INTERFACE "${portable_dir}/wifi/iot_wifi.c"
+    INTERFACE 
+        # Add device network interface source
+        "${simplelink_common_src_dir}/utils/network_if/${AFR_BOARD_NAME}/network_if.c"
+        "${portable_dir}/wifi/iot_wifi.c"
 )
+
+# WiFi on TI requires POSIX types
 target_include_directories(
     AFR::wifi::mcu_port BEFORE
     INTERFACE
       "${AFR_MODULES_ABSTRACTIONS_DIR}/posix/include"
       "${AFR_MODULES_ABSTRACTIONS_DIR}/posix/include/FreeRTOS_POSIX"
       "${AFR_MODULES_FREERTOS_PLUS_DIR}/standard/freertos_plus_posix/include"
+      "${simplelink_common_src_dir}/utils/network_if/${AFR_BOARD_NAME}"
+      "${compiler_specific_include}"
 )
 
-# WiFi on TI requires POSIX types
 target_link_libraries(
     AFR::wifi::mcu_port
     INTERFACE
@@ -301,6 +311,11 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
         PRIVATE
             "${sysconfig_out}"
             "${simplelink_common_src_dir}/utils/uart_term"
+            # We need to specify the POSIX header include directories 
+            # again as they do not seem to be set prior to this.
+            "${AFR_MODULES_ABSTRACTIONS_DIR}/posix/include"
+            "${AFR_MODULES_ABSTRACTIONS_DIR}/posix/include/FreeRTOS_POSIX"
+            "${AFR_MODULES_FREERTOS_PLUS_DIR}/standard/freertos_plus_posix/include"
     )
     target_link_libraries(
         ${exe_target}

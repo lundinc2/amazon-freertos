@@ -56,7 +56,6 @@
 
 /* Common interface includes                                                  */
 #include "network_if.h"
-#include "uart_term.h"
 
 //*****************************************************************************
 //                          LOCAL DEFINES

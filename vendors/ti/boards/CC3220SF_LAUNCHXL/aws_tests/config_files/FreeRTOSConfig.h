@@ -38,7 +38,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     #ifndef UART_PRINT
     extern int UartTerm_Report(const char *pcFormat, ...);
 
+    #define Report UartTerm_Report
     #define UART_PRINT UartTerm_Report
+    #define DBG_PRINT  UartTerm_Report
+    #define ERR_PRINT(x) UartTerm_Report("Error [%d] at line [%d] in function [%s]  \n\r",x,__LINE__,__FUNCTION__)
+
     #endif
 
 #endif

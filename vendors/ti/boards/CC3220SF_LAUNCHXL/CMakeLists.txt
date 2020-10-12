@@ -311,11 +311,6 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
         PRIVATE
             "${sysconfig_out}"
             "${simplelink_common_src_dir}/utils/uart_term"
-            # We need to specify the POSIX header include directories 
-            # again as they do not seem to be set prior to this.
-            "${AFR_MODULES_ABSTRACTIONS_DIR}/posix/include"
-            "${AFR_MODULES_ABSTRACTIONS_DIR}/posix/include/FreeRTOS_POSIX"
-            "${AFR_MODULES_FREERTOS_PLUS_DIR}/standard/freertos_plus_posix/include"
     )
     target_link_libraries(
         ${exe_target}
@@ -323,7 +318,6 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
             AFR::common_io
             AFR::wifi
             AFR::utils
-            AFR::posix::mcu_port
             ${link_extra_flags}
             -T"${board_dir}/application_code/ti_code/cc32xxsf_freertos.lds"
     )

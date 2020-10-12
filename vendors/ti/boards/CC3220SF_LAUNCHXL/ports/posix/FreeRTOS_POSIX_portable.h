@@ -31,7 +31,8 @@
 #ifndef _FREERTOS_POSIX_PORTABLE_H_
 #define _FREERTOS_POSIX_PORTABLE_H_
 
-/* This port uses the defaults in FreeRTOS_POSIX_portable_default.h, so this
- * file is empty. */
+#define posixconfigENABLE_CLOCKID_T              0
+#define posixconfigENABLE_MODE_T                 0
+#define posixconfigENABLE_TIMER_T                 0
 
 #endif /* _FREERTOS_POSIX_PORTABLE_H_ */

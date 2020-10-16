@@ -6,9 +6,9 @@
 
 #define I2C_TEST_SET                                         1
 
-/* 0xD4 is the slave address for on-board sensor. */
-const uint8_t i2cTestSlaveAddr[ I2C_TEST_SET ] = { 0x3C >> 1 };
-const uint8_t i2cTestDeviceRegister[ I2C_TEST_SET ] = { 0x02 };
+/* 0x18 is the slave address for the on-board ACC sensor. */
+const uint8_t i2cTestSlaveAddr[ I2C_TEST_SET ] = { 0x18 };
+const uint8_t i2cTestDeviceRegister[ I2C_TEST_SET ] = { 0x30 };
 const uint8_t i2cTestWriteVal[ I2C_TEST_SET ] = { 0x3 };
 const uint8_t i2cTestInstanceIdx[ I2C_TEST_SET ] = { 0 };
 const uint8_t i2cTestInstanceNum[ I2C_TEST_SET ] = { 1 };
@@ -63,8 +63,13 @@ const int32_t gpioIndexPortB = 1;
 #if defined( IOT_TEST_COMMON_IO_GPIO_SUPPORTED ) && ( IOT_TEST_COMMON_IO_GPIO_SUPPORTED >= 1 )
 void SET_TEST_IOT_GPIO_CONFIG(int testSet)
 {
-	ltestIotGpioPortA = gpioIndexPortA; 
-	ltestIotGpioPortB = gpioIndexPortB;
+    if ( testSet == 0 ) {
+        ltestIotGpioPortA = gpioIndexPortA; 
+	    ltestIotGpioPortB = gpioIndexPortB;
+    } else {
+        ltestIotGpioPortA = gpioIndexPortB; 
+	    ltestIotGpioPortB = gpioIndexPortA;
+    }
 }
 #endif
 
@@ -81,11 +86,7 @@ void SET_TEST_IOT_TIMER_CONFIG(int testSet)
 
 #define FLASH_TEST_SET                                       1
 
-/* The BLE-Stack owns the 0 index NVS instance. Since BLE will not
- * free this resource after opening, we need to create a second sector for
- * common-io tests
- */
-const uint8_t iotFlashInstance = 1;
+const uint8_t iotFlashInstance = 0;
 extern uint8_t ltestIotFlashInstance;
 
 #if defined( IOT_TEST_COMMON_IO_FLASH_SUPPORTED ) && ( IOT_TEST_COMMON_IO_FLASH_SUPPORTED >= 1 )

@@ -503,7 +503,12 @@ static time_t prvUpdateDateTime( IotRtcDescriptor_t * pxRtcDesc )
     uint32_t ulDeltaTimestamp = 0;
     uint32_t ulSeconds = 0;
 
-    if( pxRtcDesc->ulLastTimestamp <= ulOldTimestamp )
+    /* As the implementation do not allow for the full 32-bit range of the clock
+     * to be used we do not expect the timestamps to be equal due to a wrap around
+     * (the ISR should fire before this happen and update the timestamp). This means
+     * we treat "old" equal to "last" as "no time has elapsed.
+     */
+    if( pxRtcDesc->ulLastTimestamp < ulOldTimestamp )
     {
         ulDeltaTimestamp = ( ~0 ) - ( ulOldTimestamp - pxRtcDesc->ulLastTimestamp );
     }

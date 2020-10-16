@@ -118,8 +118,8 @@ UART1.txPinInstance.$name = "CONFIG_PIN_8";
 UART1.rxPinInstance.$name = "CONFIG_PIN_9";
 
 UART2.$name                            = "CONFIG_UART_1";
-UART2.uart.txPin.$assignAllowConflicts = "boosterpack.25";
-UART2.uart.rxPin.$assignAllowConflicts = "boosterpack.24";
+UART2.uart.txPin.$assignAllowConflicts = "boosterpack.8";
+UART2.uart.rxPin.$assignAllowConflicts = "boosterpack.13";
 UART2.txPinInstance.$name              = "CONFIG_PIN_13";
 UART2.rxPinInstance.$name              = "CONFIG_PIN_14";
 

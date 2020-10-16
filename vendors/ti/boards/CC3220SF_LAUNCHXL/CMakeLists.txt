@@ -32,22 +32,28 @@
 # afr_glob_src(driver_code RECURSE DIRECTORY "${driver_path}")
 # afr_glob_src(headers DIRECTORY "${some_path}" EXTENSIONS h)
 
+# -------------------------------------------------------------------------------------------------
+# Common variables setup
+# -------------------------------------------------------------------------------------------------
+
+# Set common variables
 set(simplelink_sdk_dir "${AFR_VENDORS_DIR}/ti/simplelink_cc32xx_sdk/${CC32XX_SDK_VER}")
 set(simplelink_common_src_dir "${AFR_VENDORS_DIR}/ti/simplelink_common/")
 set(portable_dir "${CMAKE_CURRENT_LIST_DIR}/ports")
 set(board_demos_dir "${CMAKE_CURRENT_LIST_DIR}/aws_demos")
 set(board_tests_dir "${CMAKE_CURRENT_LIST_DIR}/aws_tests")
-if (CMAKE_HOST_SYSTEM_NAME  STREQUAL "Linux")
+
+# Set SysConfig script path based on OS
+if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
     set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.sh")
-elseif (CMAKE_HOST_SYSTEM_NAME  STREQUAL "Darwin")
+elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
     set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.sh")
 else()
-    # If not Linux or macOS, assume Windows. 
-    # The actual "true" variable could for example be WIN32, MINGWm MSYS or CYGWIN
-    # depending on the Windows environment used.
+    # If not Linux or macOS, assume Windows. The actual "true" variable could 
+    # for example be WIN32, MINGWm MSYS or CYGWIN depending on the Windows 
+    # environment used.
     set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.bat")
 endif()
-
 
 if(AFR_IS_TESTING)
     set(board_dir "${board_tests_dir}")
@@ -61,7 +67,16 @@ else()
     set(exe_target aws_demos)
 endif()
 
-# SysConfig files
+# Include IDE specific cmake file.
+if(${AFR_TOOLCHAIN} STREQUAL "arm-gcc")
+    include("${CMAKE_CURRENT_LIST_DIR}/gcc.cmake")
+    set(compiler_str "gcc")
+    #include_directories(BEFORE "${simplelink_sdk_dir}/source/ti/posix/gcc")
+elseif(NOT AFR_METADATA_MODE)
+    message( FATAL_ERROR "The toolchain is not supported." )
+endif()
+
+# Group SysConfig files to avoid making common-io and wifi dependent
 set(sysconfig_files_wifi
     "${sysconfig_out}/ti_drivers_net_wifi_config.c"
     "${sysconfig_out}/ti_net_config.c"
@@ -74,15 +89,9 @@ set(sysconfig_files_all
     "${sysconfig_files_drivers}"
 )
 
-# Include IDE specific cmake file.
-if(${AFR_TOOLCHAIN} STREQUAL "arm-gcc")
-    include("${CMAKE_CURRENT_LIST_DIR}/gcc.cmake")
-    set(compiler_str "gcc")
-    #include_directories(BEFORE "${simplelink_sdk_dir}/source/ti/posix/gcc")
-elseif(NOT AFR_METADATA_MODE)
-    message( FATAL_ERROR "The toolchain is not supported." )
-endif()
-
+# Create SysConfig generation folder if it does not already exist
+# This to avoid CMake complaining on projects including non-existing locations
+file(MAKE_DIRECTORY ${sysconfig_out})
 
 # Setup SysConfig execution dependency
 add_custom_command(OUTPUT ${sysconfig_files_all}
@@ -96,6 +105,7 @@ add_custom_target(gen_sysconfig_files DEPENDS ${sysconfig_files_all})
 # -------------------------------------------------------------------------------------------------
 # FreeRTOS Console metadata
 # -------------------------------------------------------------------------------------------------
+
 afr_set_board_metadata(ID "TI-CC3220SF-LAUNCHXL")
 afr_set_board_metadata(DISPLAY_NAME "CC3220SF-LAUNCHXL")
 afr_set_board_metadata(DESCRIPTION "CC3220SF SimpleLink™ Wi-Fi® LaunchPad™ Development Kit")
@@ -121,6 +131,7 @@ afr_set_board_metadata(AWS_DEMOS_CONFIG_FILES_LOCATION "${CMAKE_CURRENT_LIST_DIR
 # -------------------------------------------------------------------------------------------------
 # Compiler settings
 # -------------------------------------------------------------------------------------------------
+
 afr_mcu_port(compiler)
 target_compile_definitions(
     AFR::compiler::mcu_port
@@ -152,6 +163,7 @@ target_link_libraries(
 # -------------------------------------------------------------------------------------------------
 # FreeRTOS portable layers
 # -------------------------------------------------------------------------------------------------
+
 # Normally the portable layer for kernel should be vendor's driver code.
 afr_mcu_port(kernel)
 target_sources(
@@ -176,7 +188,7 @@ target_include_directories(
     INTERFACE
         "${simplelink_sdk_dir}/source"
         "${board_dir}/config_files"
-        "${board_dir}/application_code/ti_code"
+        #"${board_dir}/application_code/ti_code"
         # Need aws_clientcredential.h
         "$<IF:${AFR_IS_TESTING},${AFR_TESTS_DIR},${AFR_DEMOS_DIR}>/include"
         ${compiler_specific_include}
@@ -291,6 +303,7 @@ target_link_libraries(
 # -------------------------------------------------------------------------------------------------
 # FreeRTOS demos and tests
 # -------------------------------------------------------------------------------------------------
+
 set(CMAKE_EXECUTABLE_SUFFIX ".out")
 
 afr_glob_src(board_code_src DIRECTORY "${board_dir}/application_code/ti_code")
@@ -326,16 +339,6 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
         COMMAND "${CMAKE_COMMAND}" -E copy "$<TARGET_FILE:${exe_target}>" "${CMAKE_BINARY_DIR}"
     )
 
-    find_program(tiobj2bin tiobj2bin PATHS "${TI_CCS_PATH}/utils/tiobj2bin")
-    find_program(mkhex4bin mkhex4bin PATHS "${TI_CCS_PATH}/utils/tiobj2bin")
-    find_program(armofd armofd PATHS "${AFR_COMPILER_DIR}")
-    find_program(armhex armhex PATHS "${AFR_COMPILER_DIR}")
-    if(tiobj2bin)
-        set(output_file "$<TARGET_FILE_DIR:${exe_target}>/${exe_target}.hex")
-        add_custom_command(
-            TARGET ${exe_target} POST_BUILD
-            COMMAND "${tiobj2bin}" "${CMAKE_BINARY_DIR}/${exe_target}.out" "${CMAKE_BINARY_DIR}/${exe_target}.bin"
-                    "${armofd}" "${armhex}" "${mkhex4bin}"
-        )
-    endif()
+    # Enable binary generation as a post-build action
+    include("${simplelink_common_src_dir}/cmake/ti_object_2_binary.cmake")
 endif()

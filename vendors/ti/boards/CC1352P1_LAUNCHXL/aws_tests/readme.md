@@ -142,9 +142,9 @@ No device needed, tests are currently single sided only.
 
 Uses UART1 module for testing,
 
-RX at DIO26 and TX at DIO27.
+RX at DIO19 and TX at DIO18.
 
-Mount jumper to connect DIO26 and DIO27 to support loopback test.
+Mount jumper to connect DIO19 and DIO18 to support loopback test.
 
 The AFQP_IotUARTWriteAsyncReadAsyncLoopbackTest test case may fail as we are
 not able to capture in flight byte count without making it device specific.
@@ -168,7 +168,16 @@ API definition where the driver follows the latter.
 
 The AFQP_IotPerfCounterGetValueWithDelay test may also fail if the device is
 allowed to enter standby as the DWT count value seem to reset.
-As long as standby is prohibited the test will pass.
+As long as standby is prohibited, the test will pass.
+
+### Watchdog:
+
+The Watchdog will fail the `AFQP_IotWatchdogValidateBiteInterrupt` test case 
+depending on the power mode constraints of the device. This as the Watchdog is
+halted while in standby. 
+
+As long as standby is prohibited, the test will pass within the given time 
+interval.
 
 ## Running the tests
 

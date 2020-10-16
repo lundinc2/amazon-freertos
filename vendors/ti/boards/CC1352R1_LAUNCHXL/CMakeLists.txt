@@ -32,17 +32,25 @@
 # afr_glob_src(driver_code RECURSE DIRECTORY "${driver_path}")
 # afr_glob_src(headers DIRECTORY "${some_path}" EXTENSIONS h)
 
+# -------------------------------------------------------------------------------------------------
+# Common variables setup
+# -------------------------------------------------------------------------------------------------
+
 set(simplelink_sdk_dir "${AFR_VENDORS_DIR}/ti/simplelink_cc13x2_26x2_sdk/${CC13X2_26X2_SDK_VER}")
 set(simplelink_common_src_dir "${AFR_VENDORS_DIR}/ti/simplelink_common/")
 set(portable_dir "${CMAKE_CURRENT_LIST_DIR}/ports")
 set(board_demos_dir "${CMAKE_CURRENT_LIST_DIR}/aws_demos")
 set(board_tests_dir "${CMAKE_CURRENT_LIST_DIR}/aws_tests")
-if (CMAKE_HOST_SYSTEM_NAME  STREQUAL "Linux")
+
+# Set SysConfig script path based on OS
+if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+    set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.sh")
+elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
     set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.sh")
 else()
-    # If not Linux, assume Windows.
-    # The actual "true" variable could for example be WIN32, MINGWm MSYS or CYGWIN
-    # depending on the Windows enviroment used.
+    # If not Linux or macOS, assume Windows. The actual "true" variable could 
+    # for example be WIN32, MINGWm MSYS or CYGWIN depending on the Windows 
+    # environment used.
     set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.bat")
 endif()
 
@@ -60,31 +68,28 @@ else()
     set(exe_target aws_demos)
 endif()
 
-set(sysconfig_files_ble
-    "${sysconfig_out}/ti_radio_config.c"
-    "${sysconfig_out}/ti_ble_config.c"
-)
-set(sysconfig_files_drivers
-    "${sysconfig_out}/ti_devices_config.c"
-    "${sysconfig_out}/ti_drivers_config.c"
-)
-set(sysconfig_files_all
-    "${sysconfig_files_ble}"
-    "${sysconfig_files_drivers}"
-)
-
-# Create SysConfig generation folder if it does not already exist
-# This to avoid CMake complaining on projects including non-existing locations
-file(MAKE_DIRECTORY ${sysconfig_out})
-
 # Include IDE specific cmake file.
-if(${AFR_TOOLCHAIN} STREQUAL "gcc")
+if(${AFR_TOOLCHAIN} STREQUAL "arm-gcc")
     include("${CMAKE_CURRENT_LIST_DIR}/gcc.cmake")
     set(compiler_str "gcc")
     include_directories(BEFORE "${simplelink_sdk_dir}/source/ti/posix/gcc")
 elseif(NOT AFR_METADATA_MODE)
     message( FATAL_ERROR "The toolchain is not supported." )
 endif()
+
+# Group SysConfig files to avoid making modules dependent of each other.
+# Currently this is not needed but left in here for future additions.
+set(sysconfig_files_drivers
+    "${sysconfig_out}/ti_devices_config.c"
+    "${sysconfig_out}/ti_drivers_config.c"
+)
+set(sysconfig_files_all
+    "${sysconfig_files_drivers}"
+)
+
+# Create SysConfig generation folder if it does not already exist
+# This to avoid CMake complaining on projects including non-existing locations
+file(MAKE_DIRECTORY ${sysconfig_out})
 
 # Setup SysConfig exection dependency
 add_custom_command(OUTPUT ${sysconfig_files_all}
@@ -193,20 +198,6 @@ target_sources(
         "${simplelink_sdk_dir}/kernel/freertos/dpl/TimerPCC26XX_freertos.c"
         "${AFR_KERNEL_DIR}/portable/MemMang/heap_4.c"
         ${compiler_specific_src}
-        # Include POSIX with kernel as in CoreSDK projects
-        # POSIX is used by the BLE HAL port
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/clock.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/memory.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/mqueue.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_barrier.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_cond.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_mutex.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_rwlock.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/sched.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/semaphore.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/sleep.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/timer.c"
 )
 
 target_include_directories(
@@ -242,11 +233,11 @@ target_sources(
       "${simplelink_common_src_dir}/ports/common_io/src/cc13x2_26x2/iot_adc.c"
       "${simplelink_common_src_dir}/ports/common_io/src/simplelink/iot_pwm.c"
       "${simplelink_common_src_dir}/ports/common_io/src/simplelink/iot_rtc.c"
-      "${simplelink_common_src_dir}/ports/common_io/src/simplelink/iot_tsensor.c"
+      "${simplelink_common_src_dir}/ports/common_io/src/cc13x2_26x2/iot_tsensor.c"
       "${simplelink_common_src_dir}/ports/common_io/src/simplelink/iot_watchdog.c"
       "${simplelink_common_src_dir}/ports/common_io/src/cc13x2_26x2/iot_hw.c"
       "${simplelink_common_src_dir}/ports/common_io/src/cc13x2_26x2/iot_reset.c"
-      "$<IF:${AFR_IS_TESTING},${simplelink_common_src_dir}/ports/common_io/iot_test_common_io_internal.c,>"
+      "$<IF:${AFR_IS_TESTING},${simplelink_common_src_dir}/ports/common_io/test_internals/${AFR_BOARD_NAME}/iot_test_common_io_internal.c,>"
 )
 
 target_include_directories(
@@ -254,84 +245,6 @@ target_include_directories(
     INTERFACE
       "${sysconfig_out}"
       "${AFR_MODULES_ABSTRACTIONS_DIR}/common_io/include"
-)
-
-afr_mcu_port(ble_hal)
-target_sources(
-    AFR::ble_hal::mcu_port
-    INTERFACE
-        "${sysconfig_files_all}"
-        # BLE_HAL implementation files
-        "${simplelink_common_src_dir}/ports/ble/iot_ble_hal_manager.c"
-        "${simplelink_common_src_dir}/ports/ble/iot_ble_hal_manager_adapter_ble.c"
-        "${simplelink_common_src_dir}/ports/ble/iot_ble_hal_mq_task.c"
-        "${simplelink_common_src_dir}/ports/ble/iot_ble_hal_types.c"
-        "${simplelink_common_src_dir}/ports/ble/iot_ble_hal_gatt_server.c"
-        "${simplelink_common_src_dir}/ports/ble/osal_icall_ble.c"
-        # ICall application side files
-        "${simplelink_sdk_dir}/source/ti/ble5stack/common/cc26xx/freertos/icall_POSIX.c"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/icall/src/icall_cc2650.c"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/icall/src/icall_user_config.c"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/icall/app/ble_user_config.c"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/icall/stack/ble_user_config_stack.c"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/icall/app/icall_api_lite.c"
-        # BLE-Stack application middleware
-        "${simplelink_sdk_dir}/source/ti/ble5stack/profiles/dev_info/cc26xx/devinfoservice.c"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/host/gattservapp_util.c"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/host/gatt_uuid.c"
-        # EEPROM emulation/NV drivers, used by stack for key storage
-        "${simplelink_sdk_dir}/source/ti/common/nv/crc.c"
-        "${simplelink_sdk_dir}/source/ti/common/nv/nvocmp.c"
-        # Secondary heap providing ISR alloc support
-        "${simplelink_sdk_dir}/source/ti/ble5stack/common/cc26xx/freertos/bget.c"
-        # ROM initialization code
-        "${simplelink_sdk_dir}/source/ti/ble5stack/rom/agama_r1/rom_init.c"
-)
-target_include_directories(
-    AFR::ble_hal::mcu_port
-    INTERFACE
-        "${sysconfig_out}"
-        "${simplelink_sdk_dir}/source"
-        "${AFR_MODULES_C_SDK_DIR}/standard/common/include/private"
-        "${simplelink_common_src_dir}/ports/ble"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/controller/cc26xx/inc"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/inc"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/rom"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/common/cc26xx"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/icall/inc"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/hal/src/target/_common"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/hal/src/target/_common/cc26xx"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/hal/src/inc"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/heapmgr"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/profiles/dev_info"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/profiles/simple_profile"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/icall/src/inc"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/icall/src"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/osal/src/inc"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/services/src/saddr"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/services/src/sdata"
-        "${simplelink_sdk_dir}/source/ti/common/nv"
-        "${simplelink_sdk_dir}/source/ti/common/cc26xx"
-        "${simplelink_sdk_dir}/source/ti/ble5stack/common/cc26xx/freertos"
-        "${simplelink_sdk_dir}/source/ti/devices/cc13x2_cc26x2"
-)
-target_compile_definitions(
-    AFR::ble_hal::mcu_port
-    INTERFACE
-        FREERTOS
-        MR_POSIX
-        NVOCMP_NWSAMEITEM=1
-        FLASH_ROM_BUILD
-        NVOCMP_POSIX_MUTEX
-)
-# Include IDE specific cmake file.
-target_compile_options(
-    AFR::ble_hal::mcu_port
-    INTERFACE
-        "@${sysconfig_out}/ti_ble_app_config.opt"
-        "@${sysconfig_out}/ti_build_config.opt"
-        "@${simplelink_sdk_dir}/source/ti/ble5stack/config/build_components.opt"
-        "@${simplelink_sdk_dir}/source/ti/ble5stack/config/factory_config.opt"
 )
 
 # -------------------------------------------------------------------------------------------------
@@ -360,19 +273,16 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
         ${exe_target}
         PRIVATE
             "${sysconfig_out}"
-            "${AFR_MODULES_C_SDK_DIR}/standard/mqtt/include"
-            "${simplelink_common_src_dir}/utils/uart_term"
+            "${simplelink_common_src_dir}/utils/uart_term"          
     )
     target_link_libraries(
         ${exe_target}
         PRIVATE
             AFR::common_io
-            AFR::ble_hal
-            AFR::ble
-            -l":source/ti/ble5stack/libraries/cc13x2r1/OneLib.a"
-            -l":source/ti/ble5stack/libraries/cc13x2r1/StackWrapper.a"
-            -l":source/ti/ble5stack/libraries/cc13x2r1/ble_r2.symbols"
             ${link_extra_flags}
             -T"${board_dir}/application_code/ti_code/cc13x2_cc26x2_freertos.lds"
     )
+
+    # Enable binary generation as a post-build action
+    include("${simplelink_common_src_dir}/cmake/ti_object_2_binary.cmake")
 endif()

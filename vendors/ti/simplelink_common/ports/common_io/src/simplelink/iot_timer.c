@@ -34,7 +34,9 @@
  * @file    iot_timer.c
  * @brief   This file contains the definitions of Timer APIs using TI drivers.
  *          The implementation uses the TI Clock DPL layer to allow for low-power
- *          operation. This limits resolution to that of the RTC clock (~30.5 us).
+ *          operation. This limits resolution to that of the RTC clock (~30.5 us)
+ *          on the CC13x2 and CC26x2 platform. For the CC32xx platform, the
+ *          resolution is the same as the FreeRTOS tick.
  */
 #include <stdint.h>
 #include <unistd.h>
@@ -243,6 +245,13 @@ int32_t iot_timer_delay( IotTimerHandle_t const pxTimerHandle,
     else
     {
         uint32_t ulDelayinTicks = ulDelayMicroSeconds / ClockP_getSystemTickPeriod();
+
+        /* In case the resulting delay is zero, strap it to at least one tick */
+        if ( 0 == ulDelayinTicks )
+        {
+            ulDelayinTicks = 1;
+        }
+
         ClockP_setTimeout( pxTimerDesc->tiTimerHandle, ulDelayinTicks );
 
         pxTimerDesc->xDelayIsSet = true;

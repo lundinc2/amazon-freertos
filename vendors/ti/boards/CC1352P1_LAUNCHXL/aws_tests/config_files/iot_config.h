@@ -24,6 +24,8 @@
 #ifndef IOT_CONFIG_H_
 #define IOT_CONFIG_H_
 
+#define AWS_IOT_NETWORK_SERVER_INFO_AFR_INITIALIZER {0}
+
 /* Platform thread stack size and priority. */
 #define IOT_THREAD_DEFAULT_STACK_SIZE    2048
 #define IOT_THREAD_DEFAULT_PRIORITY      5
@@ -32,7 +34,7 @@
  * the default. */
 #define TEST_TASKPOOL_ITERATIONS         50
 #define DEFAULT_NETWORK AWSIOT_NETWORK_TYPE_BLE
-#define BLE_SUPPORTED 1
+#define BLE_SUPPORTED 0
 #define WIFI_SUPPORTED 0
 
 #define IOT_TEST_NETWORK_HEADER  "platform/iot_network_ble.h" 

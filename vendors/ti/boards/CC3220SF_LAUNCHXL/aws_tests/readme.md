@@ -114,9 +114,10 @@ After the configuration is complete, the binary can be built using
 cmake --build build/
 ```
 
-The output binary is located in `build/aws_tests.out`. This binary can be loaded
-using Uniflash.
-
+The output is located at `build/aws_tests.out`. To load the output using Uniflash,
+a binary version first has to be generated. Assuming `TI_CCS_PATH` was defined
+during the CMake step, a binary version `aws_tests.bin` should also be available
+in the `build` directory. 
 
 ## Hardware setup
 

@@ -24,10 +24,6 @@ if( EXISTS ${CMAKE_CURRENT_LIST_DIR}/mqtt_ble )
     afr_add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/mqtt_ble")
 endif()
 
-if( EXISTS ${CMAKE_CURRENT_LIST_DIR}/shadow_ble )
-    afr_add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/shadow_ble")
-endif()
-
 # BLE Number Comparison Demo
 # Only build on boards that support BLE.
 # We don't display the demo below in AFR console

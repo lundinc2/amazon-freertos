@@ -576,7 +576,7 @@ static BaseType_t prvConnectToServerWithBackoffRetries( NetworkContext_t * pxNet
     xSocketsConfig.disableSni = true;
 
     if( convert_pem_to_der( democonfigROOT_CA_PEM,
-                            sizeof( democonfigROOT_CA_PEM ),
+                            strlen( democonfigROOT_CA_PEM ),
                             rootCADer,
                             &rootCADerSize ) != 0 )
     {

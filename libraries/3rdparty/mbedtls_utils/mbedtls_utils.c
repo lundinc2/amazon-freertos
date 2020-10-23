@@ -31,6 +31,18 @@
 #include "mbedtls/asn1.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/oid.h"
+
+#include "logging_levels.h"
+
+/* Logging configuration for the Demo. */
+#ifndef LIBRARY_LOG_NAME
+    #define LIBRARY_LOG_NAME    "Pem2Der"
+#endif
+
+#ifndef LIBRARY_LOG_LEVEL
+    #define LIBRARY_LOG_LEVEL    LOG_INFO
+#endif
+#include "logging_stack.h"
 /*-----------------------------------------------------------*/
 
 /* @brief Converts PEM documents into DER formatted byte arrays.
@@ -65,6 +77,7 @@ int convert_pem_to_der( const unsigned char * pucInput,
         return( -1 );
     }
 
+    LogInfo( ( "Found ----BEGIN" ) );
     pucS2 = ( unsigned char * ) strstr( ( const char * ) pucInput, "-----END" );
 
     if( pucS2 == NULL )
@@ -72,6 +85,7 @@ int convert_pem_to_der( const unsigned char * pucInput,
         return( -1 );
     }
 
+    LogInfo( ( "Found ----END" ) );
     pucS1 += 10;
 
     while( pucS1 < pucEnd && *pucS1 != '-' )
@@ -99,6 +113,7 @@ int convert_pem_to_der( const unsigned char * pucInput,
         return( -1 );
     }
 
+    LogInfo( ( "About to call mbedtls_base64_decode" ) );
     lRet = mbedtls_base64_decode( NULL, 0, &xOtherLen, ( const unsigned char * ) pucS1, pucS2 - pucS1 );
 
     if( lRet == MBEDTLS_ERR_BASE64_INVALID_CHARACTER )
@@ -110,6 +125,8 @@ int convert_pem_to_der( const unsigned char * pucInput,
     {
         return( -1 );
     }
+
+    LogInfo( ( "About to call mbedtls_base64_decode 2nd time" ) );
 
     if( ( lRet = mbedtls_base64_decode( pucOutput, xOtherLen, &xOtherLen, ( const unsigned char * ) pucS1,
                                         pucS2 - pucS1 ) ) != 0 )
@@ -125,8 +142,8 @@ int convert_pem_to_der( const unsigned char * pucInput,
 
 
 /* This function is a modified version of the static function
-rsa_rsassa_pkcs1_v15_encode() inside of rsa.c in mbedTLS.  It has been extracted 
-so that FreeRTOS PKCS #11 libraries and testing may use it. */
+ * rsa_rsassa_pkcs1_v15_encode() inside of rsa.c in mbedTLS.  It has been extracted
+ * so that FreeRTOS PKCS #11 libraries and testing may use it. */
 
 /* Construct a PKCS v1.5 encoding of a hashed message
  *

@@ -98,7 +98,7 @@
     #define democonfigROOT_CA_PEM    tlsATS1_ROOT_CERTIFICATE_PEM
 #endif
 static uint8_t rootCADer[ sizeof( democonfigROOT_CA_PEM ) ];
-static size_t rootCADerSize;
+static size_t rootCADerSize = sizeof( rootCADer );
 /* This function can be found in libraries/3rdparty/mbedtls_utils/mbedtls_utils.c. */
 extern int convert_pem_to_der( const unsigned char * pucInput,
                                size_t xLen,

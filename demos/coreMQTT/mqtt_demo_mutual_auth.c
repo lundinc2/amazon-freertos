@@ -573,13 +573,16 @@ static BaseType_t prvConnectToServerWithBackoffRetries( NetworkContext_t * pxNet
     xSocketsConfig.enableTls = true;
     xSocketsConfig.pAlpnProtos = NULL;
     xSocketsConfig.maxFragmentLength = 0;
-    size_t rootCADerSize;
     xSocketsConfig.disableSni = true;
 
-    convert_pem_to_der( democonfigROOT_CA_PEM,
-                        strlen( democonfigROOT_CA_PEM ),
-                        rootCADer,
-                        &rootCADerSize );
+    if( convert_pem_to_der( democonfigROOT_CA_PEM,
+                            sizeof( democonfigROOT_CA_PEM ),
+                            rootCADer,
+                            &rootCADerSize ) != 0 )
+    {
+        LogError( ( "Failed to convert Root CA from PEM to DER" ) );
+    }
+
     xSocketsConfig.pRootCa = ( const char * ) rootCADer;
     xSocketsConfig.rootCaSize = rootCADerSize;
     xSocketsConfig.sendTimeoutMs = mqttexampleTRANSPORT_SEND_RECV_TIMEOUT_MS;

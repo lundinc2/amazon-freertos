@@ -97,6 +97,13 @@
 #ifndef democonfigROOT_CA_PEM
     #define democonfigROOT_CA_PEM    tlsATS1_ROOT_CERTIFICATE_PEM
 #endif
+static uint8_t rootCADer[ sizeof( democonfigROOT_CA_PEM ) ];
+static size_t rootCADerSize;
+/* This function can be found in libraries/3rdparty/mbedtls_utils/mbedtls_utils.c. */
+extern int convert_pem_to_der( const unsigned char * pucInput,
+                               size_t xLen,
+                               unsigned char * pucOutput,
+                               size_t * pxOlen );
 
 #ifndef democonfigCLIENT_IDENTIFIER
 
@@ -566,9 +573,15 @@ static BaseType_t prvConnectToServerWithBackoffRetries( NetworkContext_t * pxNet
     xSocketsConfig.enableTls = true;
     xSocketsConfig.pAlpnProtos = NULL;
     xSocketsConfig.maxFragmentLength = 0;
+    size_t rootCADerSize;
     xSocketsConfig.disableSni = true;
-    xSocketsConfig.pRootCa = democonfigROOT_CA_PEM;
-    xSocketsConfig.rootCaSize = sizeof( democonfigROOT_CA_PEM );
+
+    convert_pem_to_der( democonfigROOT_CA_PEM,
+                        strlen( democonfigROOT_CA_PEM ),
+                        rootCADer,
+                        &rootCADerSize );
+    xSocketsConfig.pRootCa = ( const char * ) rootCADer;
+    xSocketsConfig.rootCaSize = rootCADerSize;
     xSocketsConfig.sendTimeoutMs = mqttexampleTRANSPORT_SEND_RECV_TIMEOUT_MS;
     xSocketsConfig.recvTimeoutMs = mqttexampleTRANSPORT_SEND_RECV_TIMEOUT_MS;
 

@@ -1079,7 +1079,7 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
                 if( ( pxSocketContext->ulFlags & securesocketsSOCKET_IS_CONNECTED ) == 0 )
                 {
                     /* Write the certificate to the file system. */
-                    lRetCode = prvWriteCertificate( socketsconfigSECURE_FILE_NAME_CUSTOMROOTCA,
+                    lRetCode = prvWriteCertificate( socketsconfigSECURE_FILE_NAME_ROOTCA,
                                                     pvOptionValue,
                                                     xOptionLength - 1U );
 
@@ -1090,20 +1090,9 @@ int32_t SOCKETS_SetSockOpt( Socket_t xSocket,
                         sTIRetCode = sl_SetSockOpt( pxSocketContext->sSocketDescriptor,
                                                     SL_SOL_SOCKET,
                                                     SL_SO_SECURE_FILES_CA_FILE_NAME,
-                                                    socketsconfigSECURE_FILE_NAME_CUSTOMROOTCA,
-                                                    ( SlSocklen_t ) strlen( socketsconfigSECURE_FILE_NAME_CUSTOMROOTCA ) );
+                                                    socketsconfigSECURE_FILE_NAME_ROOTCA,
+                                                    ( SlSocklen_t ) strlen( socketsconfigSECURE_FILE_NAME_ROOTCA ) );
 
-                        if( sTIRetCode >= 0 )
-                        {
-                            /* Mark the socket as having a custom trusted root CA. */
-                            pxSocketContext->ulFlags |= securesocketsSOCKET_TRUSTED_SERVER_CERT_FLAG;
-                        }
-                        else
-                        {
-                            /* See vendors/ti/SimpleLink_CC32xx/v2_10_00_04/source/ti/drivers/net/wifi/errors.h */
-                            SOCKETS_PRINT( ( "ERROR: %d Failed to set the custom root certificate.\r\n", sTIRetCode ) );
-                            lRetCode = SOCKETS_SOCKET_ERROR;
-                        }
                     }
                 }
                 else

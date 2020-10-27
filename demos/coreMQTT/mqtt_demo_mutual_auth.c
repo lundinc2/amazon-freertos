@@ -95,7 +95,7 @@
 #endif
 
 #ifndef democonfigROOT_CA_PEM
-    #define democonfigROOT_CA_PEM    tlsATS1_ROOT_CERTIFICATE_PEM
+    #define democonfigROOT_CA_PEM   tlsSTARFIELD_ROOT_CERTIFICATE_PEM
 #endif
 
 #ifndef democonfigCLIENT_IDENTIFIER
@@ -390,6 +390,8 @@ int RunCoreMqttMutualAuthDemo( bool awsIotMqttMode,
     uint32_t ulDemoRunCount = 0;
     TransportSocketStatus_t xNetworkStatus;
     BaseType_t xIsConnectionEstablished = pdFALSE;
+    size_t before = xPortGetFreeHeapSize();
+    size_t after;
 
     /* Upon return, pdPASS will indicate a successful demo execution.
     * pdFAIL will indicate some failures occurred during execution. The
@@ -542,6 +544,8 @@ int RunCoreMqttMutualAuthDemo( bool awsIotMqttMode,
             break;
         }
 
+        after = xPortGetFreeHeapSize();
+        LogInfo( ( "Heap used: %ld", before - after ) );
         LogInfo( ( "Short delay before starting the next iteration.... " ) );
         vTaskDelay( mqttexampleDELAY_BETWEEN_DEMO_ITERATIONS_TICKS );
     }

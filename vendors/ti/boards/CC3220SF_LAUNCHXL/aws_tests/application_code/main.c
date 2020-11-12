@@ -40,9 +40,7 @@
 #include "task.h"
 
 /* AWS System files. */
-#if (testrunnerFULL_WIFI_ENABLED == 1)
 #include "iot_wifi.h"
-#endif
 #include "iot_system_init.h"
 #include "aws_test_runner.h"
 #include "iot_logging_task.h"
@@ -66,11 +64,9 @@
 /* Prototypes */
 
 void vApplicationDaemonTaskStartupHook( void );
-#if (testrunnerFULL_WIFI_ENABLED == 1)
 static void prvWifiConnect( void );
 static CK_RV prvProvisionRootCA( void );
 static void prvShowTiCc3220SecurityAlertCounts( void );
-#endif
 
 /**
  * @brief Performs board and logging initializations, then starts the OS.
@@ -112,7 +108,6 @@ void vApplicationDaemonTaskStartupHook( void )
     /* Configure the UART. */
     (void)UartTerm_Init();
 
-    #if (testrunnerFULL_WIFI_ENABLED == 1)
     WIFIReturnCode_t xWifiStatus;
 
     configPRINTF( ( "Starting Wi-Fi Module ...\r\n" ) );
@@ -136,13 +131,11 @@ void vApplicationDaemonTaskStartupHook( void )
         {
         }
     }
-    #endif
 
 
     /* Initialize the AWS Libraries system. */
     if( SYSTEM_Init() == pdPASS )
     {
-        #if (testrunnerFULL_WIFI_ENABLED == 1)
         /* A simple example to demonstrate key and certificate provisioning in
          * flash using PKCS#11 interface. This should be replaced
          * by production ready key provisioning mechanism. */
@@ -156,7 +149,6 @@ void vApplicationDaemonTaskStartupHook( void )
          * the device cannot be automatically flashed, but must be reprogrammed with uniflash. This routine is placed 
          * here for debugging purposes. */
         prvShowTiCc3220SecurityAlertCounts();
-        #endif
 
         /* Create the task to run tests. */
         xTaskCreate( TEST_RUNNER_RunTests_task,
@@ -169,7 +161,6 @@ void vApplicationDaemonTaskStartupHook( void )
 }
 /* ----------------------------------------------------------*/
 
-#if (testrunnerFULL_WIFI_ENABLED == 1)
 /**
  * @brief Imports the trusted Root CA required for a connection to
  * AWS IoT endpoint.
@@ -276,7 +267,6 @@ static void prvShowTiCc3220SecurityAlertCounts( void )
         configPRINTF( ( "sl_FsCtl failed with error code: %d\r\n", lResult ) );
     }
 }
-#endif
 
 void vApplicationIdleHook( void )
 {

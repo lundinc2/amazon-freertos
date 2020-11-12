@@ -34,8 +34,8 @@
 #include "semphr.h"
 
 /* RTOS port includes. */
-#include "pthread.h"
-#include "unistd.h"
+#include "FreeRTOS_POSIX/pthread.h"
+#include "FreeRTOS_POSIX/unistd.h"
 
 /* TI Network interface includes. */
 #include "network_if.h"

@@ -54,6 +54,8 @@
 /* Simplelink includes                                                        */
 #include <ti/drivers/net/wifi/simplelink.h>
 
+#include "FreeRTOSConfig.h"
+
 /* Common interface includes                                                  */
 #include "network_if.h"
 

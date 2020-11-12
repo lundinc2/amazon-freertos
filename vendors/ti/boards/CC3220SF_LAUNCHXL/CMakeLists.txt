@@ -263,6 +263,7 @@ target_include_directories(
 target_link_libraries(
     AFR::wifi::mcu_port
     INTERFACE
+        AFR::posix
         AFR::secure_sockets
 )
 
@@ -322,8 +323,8 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
     target_include_directories(
         ${exe_target}
         PRIVATE
-            "${sysconfig_out}"
             "${simplelink_common_src_dir}/utils/uart_term"
+            "${sysconfig_out}"
     )
     target_link_libraries(
         ${exe_target}

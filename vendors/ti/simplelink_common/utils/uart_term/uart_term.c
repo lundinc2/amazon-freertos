@@ -276,7 +276,6 @@ void UartTerm_Message(const char *str)
 #ifdef UART_NONPOLLING
     sent = false;
     UART_write(uartHandle, str, strlen(str));
-    while (!sent) {};
 #else
     UART_writePolling(uartHandle, str, strlen(str));
 #endif

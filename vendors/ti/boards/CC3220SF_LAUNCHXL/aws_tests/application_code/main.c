@@ -82,6 +82,10 @@ int main( void )
 {
     /* Call board init functions. */
     Board_initGeneral();
+    /* Configure the UART. */
+    (void)UartTerm_Init();
+
+    UART_PRINT("Hello");
 
     /* Start logging task. */
     xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
@@ -105,8 +109,7 @@ int main( void )
 void vApplicationDaemonTaskStartupHook( void )
 {
 
-    /* Configure the UART. */
-    (void)UartTerm_Init();
+
 
     WIFIReturnCode_t xWifiStatus;
 

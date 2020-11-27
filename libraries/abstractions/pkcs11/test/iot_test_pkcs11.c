@@ -1000,7 +1000,7 @@ TEST( Full_PKCS11_NoObject, AFQP_Digest_ErrorConditions )
     /* Call C_DigestFinal on a buffer that is too small. */
     xDigestLength = pkcs11SHA256_DIGEST_LENGTH - 1;
     xResult = pxGlobalFunctionList->C_DigestFinal( xGlobalSession, xDigestResult, &xDigestLength );
-    TEST_ASSERT_EQUAL( CKR_BUFFER_TOO_SMALL, xResult );
+    TEST_ASSERT_EQUAL( CKR_DATA_LEN_RANGE, xResult );
 
     /* Call C_DigestFinal on a NULL session handle. */
     xDigestLength = pkcs11SHA256_DIGEST_LENGTH;
@@ -1822,7 +1822,7 @@ TEST( Full_PKCS11_EC, AFQP_GenerateKeyPair )
     CK_OBJECT_HANDLE xPublicKeyHandle = CK_INVALID_HANDLE;
     CK_OBJECT_HANDLE xCertificateHandle = CK_INVALID_HANDLE;
 
-    CK_BYTE xEcPoint[ 256 ] = { 0 };
+    CK_BYTE xEcPoint[ 67 ] = { 0 };
     CK_BYTE xPrivateKeyBuffer[ 32 ] = { 0 };
     CK_KEY_TYPE xKeyType;
     CK_ATTRIBUTE xTemplate;

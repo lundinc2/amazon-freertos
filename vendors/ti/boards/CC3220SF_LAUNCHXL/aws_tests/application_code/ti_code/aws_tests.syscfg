@@ -118,3 +118,24 @@ SPI1.spi.misoPin.$suggestSolution                                 = "boosterpack
 SPI1.spi.mosiPin.$suggestSolution                                 = "boosterpack.15";
 SPI1.spi.dmaRxChannel.$suggestSolution                            = "UDMA_CH30";
 SPI1.spi.dmaTxChannel.$suggestSolution                            = "UDMA_CH31";
+
+/**
+ * Import the modules used in this configuration.
+ */
+const SimpleLinkWifi = scripting.addModule("/ti/drivers/net/wifi/SimpleLinkWifi");
+const atcmd          = scripting.addModule("/ti/drivers/net/wifi/atcmd", {}, false);
+const atcmd1         = atcmd.addInstance();
+const SlNet          = scripting.addModule("/ti/net/SlNet", {}, false);
+const SlNet1         = SlNet.addInstance();
+const SlNetConn      = scripting.addModule("/ti/net/SlNetConn");
+
+/**
+ * Write custom configuration values to the imported modules.
+ */
+SimpleLinkWifi.ipv4Config = "DHCP";
+
+atcmd1.$name = "CONFIG_ATCMD_0";
+
+SlNet1.$name = "CONFIG_SLNET_0";
+
+SlNetConn.generateEventThread = true;

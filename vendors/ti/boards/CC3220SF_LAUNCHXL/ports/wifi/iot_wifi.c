@@ -429,17 +429,8 @@ WIFIReturnCode_t WIFI_On( void )
         }
     }
 
-    /* Reset the network processor. */
-    xRetVal = prvResetNetworkCPU();
-
-    if ( xRetVal == eWiFiSuccess )
-    {
-        /* Reset the state of the machine. */
-        Network_IF_ResetMCUStateMachine();
-
-        /* Init the Wi-Fi driver in station mode.*/
-        Network_IF_InitDriver( eWiFiModeStation );
-    }
+    /* Init the Wi-Fi driver in station mode.*/
+    Network_IF_InitDriver( eWiFiModeStation );
 
     return xRetVal;
 }

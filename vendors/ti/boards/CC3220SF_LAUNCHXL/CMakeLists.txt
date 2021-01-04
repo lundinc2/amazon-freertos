@@ -49,8 +49,8 @@ if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
 elseif (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
     set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.sh")
 else()
-    # If not Linux or macOS, assume Windows. The actual "true" variable could 
-    # for example be WIN32, MINGWm MSYS or CYGWIN depending on the Windows 
+    # If not Linux or macOS, assume Windows. The actual "true" variable could
+    # for example be WIN32, MINGWm MSYS or CYGWIN depending on the Windows
     # environment used.
     set(sysconfig_sh "${AFR_VENDORS_DIR}/ti/sysconfig/${SYSCONFIG_VER}/sysconfig_cli.bat")
 endif()
@@ -121,7 +121,7 @@ afr_set_board_metadata(IDE_CCS_COMPILER "GCC")
 afr_set_board_metadata(IS_ACTIVE "TRUE")
 afr_set_board_metadata(KEY_IMPORT_PROVISIONING "TRUE")
 
-## These projects need to be updated in a way that allows for easy SDK 
+## These projects need to be updated in a way that allows for easy SDK
 ## versioning. Remove them from metadata in the meanwhile.
 #afr_set_board_metadata(IDE_CCS_PROJECT_LOCATION "${AFR_ROOT_DIR}/projects/ti/cc3220_launchpad/ccs/aws_demos")
 #afr_set_board_metadata(IDE_IAR_PROJECT_LOCATION "${AFR_ROOT_DIR}/projects/ti/cc3220_launchpad/iar/aws_demos")
@@ -179,7 +179,7 @@ target_sources(
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SemaphoreP_freertos.c"
         "${simplelink_sdk_dir}/kernel/freertos/dpl/StaticAllocs_freertos.c"
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SwiP_freertos.c"
-        "${simplelink_sdk_dir}/kernel/freertos/dpl/SystemP_freertos.c"      
+        "${simplelink_sdk_dir}/kernel/freertos/dpl/SystemP_freertos.c"
         "${AFR_KERNEL_DIR}/portable/MemMang/heap_4.c"
         ${compiler_specific_src}
 )
@@ -202,14 +202,14 @@ target_sources(
 )
 target_include_directories(
     AFR::posix::mcu_port
-    INTERFACE 
+    INTERFACE
         "${portable_dir}/posix"
         ${compiler_specific_include}
 )
 
 target_link_libraries(
     AFR::posix::mcu_port
-    INTERFACE 
+    INTERFACE
         AFR::freertos_plus_posix
         AFR::posix
 )
@@ -243,8 +243,9 @@ target_include_directories(
 afr_mcu_port(wifi)
 target_sources(
     AFR::wifi::mcu_port
-    INTERFACE 
+    INTERFACE
         # Add device network interface source
+        "${sysconfig_files_wifi}"
         "${simplelink_common_src_dir}/utils/network_if/${AFR_BOARD_NAME}/network_if.c"
         "${portable_dir}/wifi/iot_wifi.c"
 )
@@ -315,6 +316,7 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
     add_executable(
         ${exe_target}
         ${sysconfig_files_drivers}
+        #${sysconfig_files_wifi}
         ${board_code_src}
         ${config_files}
         "${simplelink_common_src_dir}/utils/uart_term/uart_term.c"

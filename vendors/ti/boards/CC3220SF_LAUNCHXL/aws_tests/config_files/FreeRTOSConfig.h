@@ -34,7 +34,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     extern int DbgConsole_Printf( const char *fmt_s, ... );
     extern void vLoggingPrint( const char * pcMessage );
     extern void vLoggingPrintf( const char * pcFormat, ... );
-    
+
     #ifndef UART_PRINT
     extern int UartTerm_Report(const char *pcFormat, ...);
 
@@ -107,10 +107,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* The function that implements FreeRTOS printf style output, and the macro
  * that maps the configPRINTF() macros to that function. */
-#define configPRINTF( X )    vLoggingPrintf X
+#define configPRINTF( X )    UART_PRINT X
 
 /* Non-format version thread-safe print */
-#define configPRINT( X )     vLoggingPrint( X )
+#define configPRINT( X )     UART_PRINT( X )
 
 /* Map the logging task's printf to the board specific output function. */
 #define configPRINT_STRING( x )    Report( x );

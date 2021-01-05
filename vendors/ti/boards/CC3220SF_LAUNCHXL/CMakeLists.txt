@@ -201,10 +201,9 @@ target_sources(
     INTERFACE "${portable_dir}/posix/FreeRTOS_POSIX_portable.h"
 )
 target_include_directories(
-    AFR::posix::mcu_port
+    AFR::posix::mcu_port BEFORE
     INTERFACE
         "${portable_dir}/posix"
-        ${compiler_specific_include}
 )
 
 target_link_libraries(

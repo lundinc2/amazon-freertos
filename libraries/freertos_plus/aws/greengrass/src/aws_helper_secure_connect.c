@@ -54,7 +54,7 @@ static uint32_t prvIsIPaddress( const char * pcIPAddress );
 
 /*-----------------------------------------------------------*/
 
-BaseType_t GGD_SecureConnect_Connect( const GGD_HostAddressData_t * pxHostAddressData,
+BaseType_t GGD_SecureConnect_Connect( GGD_HostAddressData_t * pxHostAddressData,
                                       Socket_t * pxSocket,
                                       uint32_t ulReceiveTimeOut,
                                       uint32_t ulSendTimeOut )
@@ -71,7 +71,7 @@ BaseType_t GGD_SecureConnect_Connect( const GGD_HostAddressData_t * pxHostAddres
     configASSERT( pxSocket != NULL );
 
     /* Calculate the length of the supplied URL. */
-    xURLLength = strlen( pxHostAddressData->pcHostAddress );
+    xURLLength = pxHostAddressData->ulHostAddressLen;
 
     /* Ensure that the length of the specified URL is
      * within the permitted limits. */
@@ -93,19 +93,20 @@ BaseType_t GGD_SecureConnect_Connect( const GGD_HostAddressData_t * pxHostAddres
 
         if( xStatus == pdPASS )
         {
-            if( prvIsIPaddress( pxHostAddressData->pcHostAddress ) == ( uint32_t ) 0 )
+            if( prvIsIPaddress( pxHostAddressData->pcHostAddress, pxHostAddressData->ulHostAddressLen ) == ( uint32_t ) 0 )
             {
+                xServerAddress.ulAddress =
+                    SOCKETS_GetHostByName( pxHostAddressData->pcHostAddress );
                 xIsIPAddress = pdFALSE;
             }
             else
             {
+                xServerAddress.ulAddress = FreeRTOS_inet_addr( pxHostAddressData->pcHostAddress );
                 xIsIPAddress = pdTRUE;
             }
 
             xServerAddress.ucLength = sizeof( SocketsSockaddr_t );
             xServerAddress.usPort = SOCKETS_htons( pxHostAddressData->usPort );
-            xServerAddress.ulAddress =
-                SOCKETS_GetHostByName( pxHostAddressData->pcHostAddress );
 
             if( xServerAddress.ulAddress == 0u )
             {
@@ -355,7 +356,8 @@ BaseType_t GGD_SecureConnect_Read( char * pcBuffer, /*lint !e971 can use char wi
 /*-----------------------------------------------------------*/
 
 
-static uint32_t prvIsIPaddress( const char * pcIPAddress )
+static uint32_t prvIsIPaddress( const char * pcIPAddress,
+                                size_t ulIPAddressLen )
 {
     const uint32_t ulDecimalBase = 10u;
     uint8_t ucOctet[ helperMAX_IP_ADDRESS_OCTETS ];
@@ -363,6 +365,7 @@ static uint32_t prvIsIPaddress( const char * pcIPAddress )
     uint32_t ulReturn = 0UL, ulValue;
     UBaseType_t uxOctetNumber;
     BaseType_t xResult = pdPASS;
+    size_t ulReadBytes = 0;
 
     for( uxOctetNumber = 0u; uxOctetNumber < helperMAX_IP_ADDRESS_OCTETS; uxOctetNumber++ )
     {
@@ -380,6 +383,7 @@ static uint32_t prvIsIPaddress( const char * pcIPAddress )
 
             /* Move to next character in the string. */
             pcIPAddress++;
+            ulReadBytes++;
         }
 
         /* Check characters were read. */
@@ -419,15 +423,15 @@ static uint32_t prvIsIPaddress( const char * pcIPAddress )
         }
     }
 
-    if( *pcIPAddress != ( char ) 0 )
-    {
-        /* Expected the end of the string. */
-        xResult = pdFAIL;
-    }
-
     if( uxOctetNumber != helperMAX_IP_ADDRESS_OCTETS )
     {
         /* Didn't read enough octets. */
+        xResult = pdFAIL;
+    }
+
+    if( ulReadBytes > ulIPAddressLen )
+    {
+        /* Read past address string. */
         xResult = pdFAIL;
     }
 

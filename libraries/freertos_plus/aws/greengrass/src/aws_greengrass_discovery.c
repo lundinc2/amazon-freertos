@@ -44,7 +44,7 @@
 #include "aws_ggd_config_defaults.h"
 #include "aws_greengrass_discovery.h"
 #include "aws_helper_secure_connect.h"
-#include "jsmn.h"
+#include "core_json.h"
 
 /* Standard includes. */
 #include <stdlib.h>
@@ -111,35 +111,21 @@
  * duplicate code between auto connect and custom connect.
  */
 /** @{ */
-static BaseType_t prvGGDJsoneq( const char * pcJson,     /*lint !e971 can use char without signed/unsigned. */
-                                const jsmntok_t * const pxTok,
-                                const char * pcString ); /*lint !e971 can use char without signed/unsigned. */
-static void prvCheckMatch( const char * pcJSONFile,      /*lint !e971 can use char without signed/unsigned. */
-                           const jsmntok_t * pxTok,
-                           const uint32_t ulTokenIndex,
-                           BaseType_t * pxMatch,
-                           const char * pcMatchCategory,   /*lint !e971 can use char without signuint32_t ulNbTokensed/unsigned. */
-                           const char * pcMatchString,     /*lint !e971 can use char without signed/unsigned. */
-                           const BaseType_t xAutoSelectFlag );
-static BaseType_t prvGGDGetCertificate( char * pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
+static BaseType_t prvGGDGetCertificate( char * pcJSONFile,
+                                        const uint32_t ulJSONFileSize,
                                         const HostParameters_t * pxHostParameters,
                                         const BaseType_t xAutoSelectFlag,
-                                        const jsmntok_t * pxTok,
-                                        const uint32_t ulNbTokens,
                                         GGD_HostAddressData_t * pxHostAddressData );
-static BaseType_t prvGGDGetIPOnInterface( char * pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
+
+static BaseType_t prvGGDGetIPOnInterface( char * pcJSONFile,
+                                          const uint32_t ulJSONFileSize,
                                           const uint8_t ucTargetInterface,
-                                          const jsmntok_t * pxTok,
-                                          const uint32_t ulNbTokens,
-                                          GGD_HostAddressData_t * pxHostAddressData,
-                                          uint32_t * pulTokenIndex,
-                                          uint8_t * pucCurrentInterface );
-static BaseType_t prvGGDGetCore( const char * pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
-                                 const HostParameters_t * const pxHostParameters,
+                                          GGD_HostAddressData_t * pxHostAddressData );
+static BaseType_t prvGGDGetCore( const char * pcJSONFile,
+                                 const uint32_t ulJSONFileSize,
+                                 const HostParameters_t * pxHostParameters,
                                  const BaseType_t xAutoSelectFlag,
-                                 const jsmntok_t * pxTok,
-                                 const uint32_t ulNbTokens,
-                                 uint32_t * pulTokenIndex );
+                                 GGD_HostAddressData_t * pxHostAddressData );
 static BaseType_t prvIsIPvalid( const char * pcIP,
                                 uint32_t ulIPlength );
 /** @} */
@@ -167,8 +153,11 @@ BaseType_t GGD_GetGGCIPandCertificate( const char * pcHostAddress,
     BaseType_t xJSONFileRetrieveCompleted = pdFALSE;
     uint32_t ulByteRead = 0;
     BaseType_t xStatus;
+    HostParameters_t xHostParameters;
+
 
     configASSERT( pxHostAddressData != NULL );
+
     configASSERT( pcBuffer != NULL );
 
     xStatus = GGD_JSONRequestStart( pcHostAddress, usGGDPort, pcThingName, &xSocket );
@@ -218,8 +207,8 @@ BaseType_t GGD_GetGGCIPandCertificate( const char * pcHostAddress,
     if( xStatus == pdPASS )
     {
         xStatus = GGD_GetIPandCertificateFromJSON( pcBuffer,
-                                                   ulJSONFileSize,
-                                                   NULL,
+                                                   ulJSONFileSize - 1,
+                                                   &xHostParameters,
                                                    pxHostAddressData,
                                                    pdTRUE );
     }
@@ -243,8 +232,9 @@ BaseType_t GGD_JSONRequestStart( const char * pcHostAddress,
     configASSERT( pcThingName != NULL );
     configASSERT( pxSocket != NULL );
 
-    xHostAddressData.pcHostAddress = pcHostAddress; /*lint !e971 can use char without signed/unsigned. */
-    xHostAddressData.pcCertificate = NULL;          /* Use default certificate. */
+    xHostAddressData.pcHostAddress = pcHostAddress;              /*lint !e971 can use char without signed/unsigned. */
+    xHostAddressData.ulHostAddressLen = strlen( pcHostAddress ); /*lint !e971 can use char without signed/unsigned. */
+    xHostAddressData.pcCertificate = NULL;                       /* Use default certificate. */
     xHostAddressData.ulCertificateSize = 0;
     xHostAddressData.usPort = usGGDPort;
 
@@ -493,10 +483,8 @@ BaseType_t GGD_GetIPandCertificateFromJSON( char * pcJSONFile, /*lint !e971 can 
                                             const BaseType_t xAutoSelectFlag )
 {
     Socket_t xSocket;
-    BaseType_t xStatus;
-    jsmn_parser xParser;
-    jsmntok_t pxTok[ ggdconfigJSON_MAX_TOKENS ];
-    int32_t lNbTokens;
+    BaseType_t xStatus = pdPASS;
+    JSONStatus_t result;
     uint32_t ulTokenIndex = 0;
     uint8_t ucCurrentInterface = 0, ucTargetInterface = 1;
     BaseType_t xFoundGGC = pdFALSE;
@@ -510,16 +498,10 @@ BaseType_t GGD_GetIPandCertificateFromJSON( char * pcJSONFile, /*lint !e971 can 
         configASSERT( pxHostParameters != NULL );
     }
 
-    jsmn_init( &xParser );
-    /* From jsmn, parse the JSON file. */
-    lNbTokens = ( int32_t ) jsmn_parse( &xParser,
-                                        pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
-                                        ( size_t ) ulJSONFileSize,
-                                        pxTok,
-                                        ( unsigned int ) ggdconfigJSON_MAX_TOKENS ); /*lint !e961 redundant casting only when int = int32_t. */
+    result = JSON_Validate( pcJSONFile, ulJSONFileSize );
 
     /* Manage the case. */
-    if( lNbTokens < 0 )
+    if( result != JSONSuccess )
     {
         ggdconfigPRINT( "JSON parsing: Failed to parse JSON\r\n" );
 
@@ -527,36 +509,14 @@ BaseType_t GGD_GetIPandCertificateFromJSON( char * pcJSONFile, /*lint !e971 can 
     }
     else
     {
-        xStatus = pdPASS;
-    }
-
-    if( xStatus == pdPASS )
-    {
         /* Look for the green grass group certificate. */
         if( prvGGDGetCertificate( pcJSONFile,
+                                  ulJSONFileSize,
                                   pxHostParameters,
                                   xAutoSelectFlag,
-                                  pxTok,
-                                  ( uint32_t ) lNbTokens, /*lint !e644 lNbTokens has been initialized if code reaches here. */
                                   pxHostAddressData ) == pdFAIL )
         {
             ggdconfigPRINT( "JSON parsing: Couldn't find certificate\r\n" );
-
-            xStatus = pdFAIL;
-        }
-    }
-
-    if( xStatus == pdPASS )
-    {
-        /* Look for the green grass core, green grass core position is returned in ulTokenIndex. */
-        if( prvGGDGetCore( pcJSONFile,
-                           pxHostParameters,
-                           xAutoSelectFlag,
-                           pxTok,
-                           ( uint32_t ) lNbTokens,
-                           &ulTokenIndex ) == pdFAIL )
-        {
-            ggdconfigPRINT( "JSON parsing: Couldn't find Green Grass Core\r\n" );
 
             xStatus = pdFAIL;
         }
@@ -571,12 +531,9 @@ BaseType_t GGD_GetIPandCertificateFromJSON( char * pcJSONFile, /*lint !e971 can 
         if( xAutoSelectFlag == pdFALSE )
         {
             if( prvGGDGetIPOnInterface( pcJSONFile,
+                                        ulJSONFileSize,
                                         pxHostParameters->ucInterface,
-                                        pxTok,
-                                        ( uint32_t ) lNbTokens,
-                                        pxHostAddressData,
-                                        &ulTokenIndex,
-                                        &ucCurrentInterface ) == pdFAIL )
+                                        pxHostAddressData ) == pdFAIL )
             {
                 ggdconfigPRINT( "GGC - Can't find interface\r\n" );
             }
@@ -588,15 +545,12 @@ BaseType_t GGD_GetIPandCertificateFromJSON( char * pcJSONFile, /*lint !e971 can 
         else
         {
             while( prvGGDGetIPOnInterface( pcJSONFile,
-                                           ucTargetInterface,
-                                           pxTok,
-                                           ( uint32_t ) lNbTokens,
-                                           pxHostAddressData,
-                                           &ulTokenIndex,
-                                           &ucCurrentInterface ) == pdPASS )
+                                           ulJSONFileSize,
+                                           pxHostParameters->ucInterface,
+                                           pxHostAddressData ) == pdPASS )
             {
                 xIsIPValid = prvIsIPvalid( ( const char * ) pxHostAddressData->pcHostAddress,
-                                           strlen( pxHostAddressData->pcHostAddress ) );
+                                           pxHostAddressData->ulHostAddressLen );
 
                 if( xIsIPValid == pdTRUE )
                 {
@@ -629,120 +583,30 @@ BaseType_t GGD_GetIPandCertificateFromJSON( char * pcJSONFile, /*lint !e971 can 
 }
 /*-----------------------------------------------------------*/
 
-/* Return true if the string " pcString" is found inside the token pxTok in JSON file pcJson. */
-static BaseType_t prvGGDJsoneq( const char * pcJson,    /*lint !e971 can use char without signed/unsigned. */
-                                const jsmntok_t * const pxTok,
-                                const char * pcString ) /*lint !e971 can use char without signed/unsigned. */
-{
-    uint32_t ulStringSize = ( uint32_t ) pxTok->end - ( uint32_t ) pxTok->start;
-    BaseType_t xStatus = pdFALSE;
-
-    if( pxTok->type == JSMN_STRING )
-    {
-        if( ( uint32_t ) strlen( pcString ) == ulStringSize )
-        {
-            if( ( int16_t ) strncmp( &pcJson[ pxTok->start ],
-                                     pcString,
-                                     ulStringSize ) == 0 )
-            {
-                xStatus = pdTRUE;
-            }
-        }
-    }
-
-    return xStatus;
-}
-/*-----------------------------------------------------------*/
-
-
-static void prvCheckMatch( const char * pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
-                           const jsmntok_t * pxTok,
-                           const uint32_t ulTokenIndex,
-                           BaseType_t * pxMatch,
-                           const char * pcMatchCategory, /*lint !e971 can use char without signed/unsigned. */
-                           const char * pcMatchString,   /*lint !e971 can use char without signed/unsigned. */
-                           const BaseType_t xAutoSelectFlag )
-{
-    *pxMatch = prvGGDJsoneq( pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
-                             &pxTok[ ulTokenIndex ],
-                             pcMatchCategory );
-
-    if( *pxMatch == pdTRUE )
-    {
-        /* Is that the group we are looking for? */
-        if( xAutoSelectFlag != pdTRUE )
-        {
-            if( ( prvGGDJsoneq( pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
-                                &pxTok[ ulTokenIndex + ( uint32_t ) 1 ],
-                                pcMatchString ) == pdTRUE ) )
-            {
-                *pxMatch = pdTRUE;
-            }
-            else
-            {
-                *pxMatch = pdFALSE;
-            }
-        }
-        else
-        {
-            *pxMatch = pdTRUE;
-        }
-    }
-}
-/*-----------------------------------------------------------*/
-
-static BaseType_t prvGGDGetCore( const char * pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
+static BaseType_t prvGGDGetCore( const char * pcJSONFile,
+                                 const uint32_t ulJSONFileSize,
                                  const HostParameters_t * const pxHostParameters,
-                                 const BaseType_t xAutoSelectFlag,
-                                 const jsmntok_t * pxTok,
-                                 const uint32_t ulNbTokens,
-                                 uint32_t * pulTokenIndex )
+                                 const BaseType_t xAutoSelectFlag )
 {
     BaseType_t xStatus = pdFAIL;
     BaseType_t xMatchGroup = pdFALSE;
     BaseType_t xMatchCore = pdFALSE;
+    char query[] = ".GGGroups[0].Cores[0].thingArn";
+    size_t queryLength = sizeof( query ) - 1;
+    char * value;
+    size_t valueLength;
+    JSONStatus_t result;
 
-    /* Look for the green grass core inside the group. */
-    for( *pulTokenIndex = 0; *pulTokenIndex < ulNbTokens; ( *pulTokenIndex )++ )
+    result = JSON_Search( pcJSONFile,
+                          ulJSONFileSize,
+                          query,
+                          queryLength,
+                          &value,
+                          &valueLength );
+
+    if( result == JSONSuccess )
     {
-        /* Check if group matches. */
-        if( xAutoSelectFlag == pdTRUE )
-        {
-            xMatchGroup = pdTRUE;
-            xMatchCore = pdTRUE;
-        }
-        else
-        {
-            if( xMatchGroup != pdTRUE )
-            {
-                prvCheckMatch( pcJSONFile,
-                               pxTok,
-                               *pulTokenIndex,
-                               &xMatchGroup,
-                               ggdJSON_FILE_GROUPID,
-                               pxHostParameters->pcGroupName, /*lint !e971 can use char without signed/unsigned. */
-                               xAutoSelectFlag );
-            }
-            else
-            {
-                /* Check if core matches. */
-                prvCheckMatch( pcJSONFile,
-                               pxTok,
-                               *pulTokenIndex,
-                               &xMatchCore,
-                               ggdJSON_FILE_THING_ARN,
-                               pxHostParameters->pcCoreAddress, /*lint !e971 can use char without signed/unsigned. */
-                               xAutoSelectFlag );
-            }
-        }
-
-        /* We have a match! correct core and correct group! */
-        if( ( xMatchCore == pdTRUE ) && ( xMatchGroup == pdTRUE ) )
-        {
-            /* We have found the Core, now break and try to connect to the interface. */
-            xStatus = pdPASS;
-            break;
-        }
+        xStatus = pdPASS;
     }
 
     /* Green grass core not found. */
@@ -750,87 +614,67 @@ static BaseType_t prvGGDGetCore( const char * pcJSONFile, /*lint !e971 can use c
 }
 /*-----------------------------------------------------------*/
 
-static BaseType_t prvGGDGetCertificate( char * pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
+static BaseType_t prvGGDGetCertificate( char * pcJSONFile,
+                                        const uint32_t ulJSONFileSize,
                                         const HostParameters_t * pxHostParameters,
                                         const BaseType_t xAutoSelectFlag,
-                                        const jsmntok_t * pxTok,
-                                        const uint32_t ulNbTokens,
                                         GGD_HostAddressData_t * pxHostAddressData )
 {
     BaseType_t xMatchGroup = pdFALSE;
-    uint32_t ulTokenIndex;
-    uint32_t ulReadIndex = 0, ulWriteIndex = 0;
     BaseType_t xStatus = pdFAIL;
 
-    /* Loop over all keys of the root object. */
-    for( ulTokenIndex = 0; ulTokenIndex < ulNbTokens; ulTokenIndex++ )
+    /* TODO: This is just grabbing the first CA. Need to update to match
+     * multi CA case. */
+    char query[] = "GGGroups[0].CAs[0]";
+    size_t queryLength = sizeof( query ) - 1;
+    char * value;
+    size_t valueLength;
+    JSONStatus_t result;
+    char * certbuf = NULL;
+    uint32_t ulReadIndex = 1, ulWriteIndex = 0;
+
+    result = JSON_Search( pcJSONFile,
+                          ulJSONFileSize,
+                          query,
+                          queryLength,
+                          &value,
+                          &valueLength );
+
+    if( result == JSONSuccess )
     {
-        /* Check if group matches. */
-        if( xAutoSelectFlag == pdTRUE )
-        {
-            xMatchGroup = pdTRUE;
-        }
+        certbuf = pvPortMalloc( valueLength + 1 );
+        memset( certbuf, 0x00, valueLength + 1 );
+        /* strip trailing \n character. */
+        memcpy( certbuf, value, valueLength - 2 );
 
-        if( xMatchGroup != pdTRUE )
+        /* strip \\ chars */
+        do
         {
-            prvCheckMatch( pcJSONFile, pxTok,
-                           ulTokenIndex,
-                           &xMatchGroup,
-                           ggdJSON_FILE_GROUPID,
-                           pxHostParameters->pcGroupName,
-                           xAutoSelectFlag );
-        }
-        else
-        {
-            if( prvGGDJsoneq( pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
-                              &pxTok[ ulTokenIndex ],
-                              ggdJSON_FILE_CERTIFICATE ) == pdTRUE )
+            if( ( certbuf[ ulReadIndex - ( uint32_t ) 1 ] == '\\' ) &&
+                ( certbuf[ ulReadIndex ] == 'n' ) )
             {
-                pxHostAddressData->pcCertificate =
-                    &pcJSONFile[ pxTok[ ulTokenIndex + ( uint32_t ) 1 ].start ];
-                /* Skip 2 brackets at the beginning that are not used in certificate. */
-                pxHostAddressData->pcCertificate =
-                    &pxHostAddressData->pcCertificate[ 2 ];
-
-                /* Remove 2 that correspond to the skipped brackets. */
-                pxHostAddressData->ulCertificateSize = ( ( uint32_t ) pxTok[ ulTokenIndex + ( uint32_t ) 1 ].end
-                                                         - ( uint32_t ) pxTok[ ulTokenIndex + ( uint32_t ) 1 ].start )
-                                                       - ( uint32_t ) 2;
-                ulWriteIndex = 0;
-
-                /* This section will convert the certificate from the JSON file into a certificate that can be
-                 * given to the TLS service. For that all the \\ has to be replaced by \n. */
-                ulReadIndex = 1;
-
-                do
-                {
-                    if( ( pxHostAddressData->pcCertificate[ ulReadIndex - ( uint32_t ) 1 ] == '\\' ) &&
-                        ( pxHostAddressData->pcCertificate[ ulReadIndex ] == 'n' ) )
-                    {
-                        pxHostAddressData->pcCertificate[ ulWriteIndex ] = '\n';
-                        ulReadIndex++;
-                    }
-                    else
-                    {
-                        pxHostAddressData->pcCertificate[ ulWriteIndex ] =
-                            pxHostAddressData->pcCertificate[ ulReadIndex - ( uint32_t ) 1 ];
-                    }
-
-                    ulReadIndex++;
-                    ulWriteIndex++;
-                }
-                while( ulReadIndex < pxHostAddressData->ulCertificateSize );
-
-                pxHostAddressData->ulCertificateSize = ulWriteIndex;
-                pxHostAddressData->pcCertificate[ ulWriteIndex - ( uint32_t ) 1 ] = '\0';
-
-                xStatus = pdPASS;
+                certbuf[ ulWriteIndex ] = '\n';
+                ulReadIndex++;
             }
+            else
+            {
+                certbuf[ ulWriteIndex ] =
+                    certbuf[ ulReadIndex - ( uint32_t ) 1 ];
+            }
+
+            ulReadIndex++;
+            ulWriteIndex++;
         }
+        while( ulReadIndex < valueLength );
+
+        pxHostAddressData->pcCertificate = certbuf;
+        pxHostAddressData->ulCertificateSize = ulWriteIndex;
+        xStatus = pdPASS;
     }
 
     return xStatus;
 }
+
 /*-----------------------------------------------------------*/
 
 static BaseType_t prvIsIPvalid( const char * pcIP,
@@ -854,53 +698,57 @@ static BaseType_t prvIsIPvalid( const char * pcIP,
 
 /*-----------------------------------------------------------*/
 
-static BaseType_t prvGGDGetIPOnInterface( char * pcJSONFile, /*lint !e971 can use char without signed/unsigned. */
+static BaseType_t prvGGDGetIPOnInterface( char * pcJSONFile,
+                                          const uint32_t ulJSONFileSize,
                                           const uint8_t ucTargetInterface,
-                                          const jsmntok_t * pxTok,
-                                          const uint32_t ulNbTokens,
-                                          GGD_HostAddressData_t * pxHostAddressData,
-                                          uint32_t * pulTokenIndex,
-                                          uint8_t * pucCurrentInterface )
+                                          GGD_HostAddressData_t * pxHostAddressData )
 {
     BaseType_t xStatus = pdFAIL;
     BaseType_t xFoundIP = pdFALSE;
     BaseType_t xFoundPort = pdFALSE;
+    char hostAddressQuery[] = "GGGroups[0].Cores[0].Connectivity[0].HostAddress";
+    char hostPortQuery[] = "GGGroups[0].Cores[0].Connectivity[0].PortNumber";
+    size_t hostAddressQueryLength = sizeof( hostAddressQuery ) - 1;
+    size_t hostPortQueryLength = sizeof( hostPortQuery ) - 1;
+    char * value;
+    size_t valueLength;
+    JSONStatus_t result;
 
-    /* From the green grass core position. */
-    for( ; *pulTokenIndex < ulNbTokens; ( *pulTokenIndex )++ )
+    result = JSON_Search( pcJSONFile,
+                          ulJSONFileSize,
+                          hostAddressQuery,
+                          hostAddressQueryLength,
+                          &value,
+                          &valueLength );
+
+    if( result == JSONSuccess )
     {
-        if( prvGGDJsoneq( pcJSONFile, &pxTok[ *pulTokenIndex ], /*lint !e971 can use char without signed/unsigned. */
-                          ggdJSON_FILE_HOST_ADDRESS ) == pdTRUE )
-        {
-            xFoundIP = pdTRUE;
-            pxHostAddressData->pcHostAddress =
-                &pcJSONFile[ pxTok[ *pulTokenIndex + ( uint32_t ) 1 ].start ]; /*lint !e971 can use char without signed/unsigned. */
-            pcJSONFile[ pxTok[ *pulTokenIndex + ( uint32_t ) 1 ].end ] = '\0'; /* End with a null  character. */
-        }
-
-        if( prvGGDJsoneq( pcJSONFile, &pxTok[ *pulTokenIndex ], /*lint !e971 can use char without signed/unsigned. */
-                          ggdJSON_FILE_PORT_NUMBER ) == pdTRUE )
-        {
-            pxHostAddressData->usPort = ( uint16_t ) strtoul( &pcJSONFile[ pxTok[ *pulTokenIndex + ( uint32_t ) 1 ].start ], NULL, ggJSON_CONVERTION_RADIX );
-            xFoundPort = pdTRUE;
-        }
-
-        /* Get host IP address. */
-        if( ( xFoundIP == pdTRUE ) && ( xFoundPort == pdTRUE ) )
-        {
-            xFoundIP = pdFALSE;
-            xFoundPort = pdFALSE;
-            ( *pucCurrentInterface )++;
-
-            if( *pucCurrentInterface == ucTargetInterface )
-            {
-                xStatus = pdPASS;
-                break;
-            }
-        }
+        char * addressbuf = pvPortMalloc( valueLength + 1 );
+        memset( addressbuf, 0x00, pxHostAddressData->ulHostAddressLen + 1 );
+        memcpy( addressbuf, value, valueLength );
+        pxHostAddressData->pcHostAddress = addressbuf;
+        pxHostAddressData->ulHostAddressLen = valueLength;
+        xStatus = pdPASS;
+        xFoundIP = pdTRUE;
     }
 
-    ( *pulTokenIndex )++; /* Increase index to avoid avoid a match next time the function is called */
+    value = NULL;
+    valueLength = 0;
+
+    result = JSON_Search( pcJSONFile,
+                          ulJSONFileSize,
+                          hostPortQuery,
+                          hostPortQueryLength,
+                          &value,
+                          &valueLength );
+
+    if( result == JSONSuccess )
+    {
+        pxHostAddressData->usPort = strtoul( value, NULL, ggJSON_CONVERTION_RADIX );
+        xStatus = pdPASS;
+        xFoundIP = pdTRUE;
+    }
+
     return xStatus;
 }
 /*-----------------------------------------------------------*/

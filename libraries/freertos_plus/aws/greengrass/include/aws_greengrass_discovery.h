@@ -58,6 +58,7 @@ typedef struct
 typedef struct
 {
     const char * pcHostAddress; /**< Host address, could be IP or hostname. */
+    const char * ulHostAddressLen; /**< Host address buffer length. */
     char * pcCertificate;       /**< Certificate of GGC. */
     uint32_t ulCertificateSize; /**< Certificate size of GGC. */
     uint16_t usPort;            /**< Port to connect to the GGC. */

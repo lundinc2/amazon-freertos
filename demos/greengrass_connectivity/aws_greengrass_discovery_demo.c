@@ -139,6 +139,24 @@
 
 #define mqttexampleKEEP_ALIVE_TIMEOUT_SECONDS    ( 60U )
 
+/**
+ * @brief Milliseconds per second.
+ */
+#define MILLISECONDS_PER_SECOND                  ( 1000U )
+
+
+/**
+ * @brief Milliseconds per FreeRTOS tick.
+ */
+#define MILLISECONDS_PER_TICK    ( MILLISECONDS_PER_SECOND / configTICK_RATE_HZ )
+
+/**
+ * @brief Global entry time into the application to use as a reference timestamp
+ * in the #prvGetTimeMs function. #prvGetTimeMs will always return the difference
+ * between the current time and the global entry time. This will reduce the chances
+ * of overflow for the 32 bit unsigned integer used for holding the timestamp.
+ */
+static uint32_t ulGlobalEntryTimeMs;
 
 /**
  * @brief Contains the user data for callback processing.
@@ -224,11 +242,44 @@ static BaseType_t prvSendHttpRequest( const TransportInterface_t * pxTransportIn
 static BaseType_t prvGetGGCoreJSON( char ** ppcJSONFile,
                                     uint32_t * plJSONFileLength );
 
-static IotMqttError_t _mqttConnect( GGD_HostAddressData_t * pxHostAddressData,
-                                    const IotNetworkInterface_t * pNetworkInterface,
-                                    IotMqttConnection_t * pMqttConnection );
 static void _sendMessageToGGC( IotMqttConnection_t mqttConnection );
 static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterface );
+
+static uint32_t prvGetTimeMs( void )
+{
+    TickType_t xTickCount = 0;
+    uint32_t ulTimeMs = 0UL;
+
+    /* Get the current tick count. */
+    xTickCount = xTaskGetTickCount();
+
+    /* Convert the ticks to milliseconds. */
+    ulTimeMs = ( uint32_t ) xTickCount * MILLISECONDS_PER_TICK;
+
+    /* Reduce ulGlobalEntryTimeMs from obtained time so as to always return the
+     * elapsed time in the application. */
+    ulTimeMs = ( uint32_t ) ( ulTimeMs - ulGlobalEntryTimeMs );
+
+    return ulTimeMs;
+}
+
+static void prvEventCallback( MQTTContext_t * pxMQTTContext,
+                              MQTTPacketInfo_t * pxPacketInfo,
+                              MQTTDeserializedInfo_t * pxDeserializedInfo )
+{
+    /* The MQTT context is not used for this demo. */
+    ( void ) pxMQTTContext;
+
+    if( ( pxPacketInfo->type & 0xF0U ) == MQTT_PACKET_TYPE_PUBLISH )
+    {
+        /* TODO */
+        /*prvMQTTProcessIncomingPublish( pxDeserializedInfo->pPublishInfo ); */
+    }
+    else
+    {
+        /*prvMQTTProcessResponse( pxPacketInfo, pxDeserializedInfo->packetIdentifier ); */
+    }
+}
 
 /*-----------------------------------------------------------*/
 static BaseType_t prvGGDGetCertificate( char * pcJSONFile,
@@ -393,70 +444,6 @@ static void _sendMessageToGGC( IotMqttConnection_t mqttConnection )
 
         IotClock_SleepMs( _timeBetweenPublishMs );
     }
-}
-
-/*-----------------------------------------------------------*/
-
-static IotMqttError_t _mqttConnect( GGD_HostAddressData_t * pxHostAddressData,
-                                    const IotNetworkInterface_t * pNetworkInterface,
-                                    IotMqttConnection_t * pMqttConnection )
-{
-    IotMqttError_t xMqttStatus = IOT_MQTT_STATUS_PENDING;
-    IotNetworkServerInfo_t xServerInfo = { 0 };
-    IotNetworkCredentials_t xCredentials = AWS_IOT_NETWORK_CREDENTIALS_AFR_INITIALIZER;
-    IotMqttNetworkInfo_t xNetworkInfo = IOT_MQTT_NETWORK_INFO_INITIALIZER;
-    IotMqttConnectInfo_t xMqttConnectInfo = IOT_MQTT_CONNECT_INFO_INITIALIZER;
-    uint32_t connectAttempt = 0;
-
-    /* Set the server certificate for a secured connection. Other credentials
-     * are set by the initializer. */
-    xCredentials.pRootCa = pxHostAddressData->pcCertificate;
-    xCredentials.rootCaSize = ( size_t ) pxHostAddressData->ulCertificateSize;
-    /* Disable SNI. */
-    xCredentials.disableSni = true;
-    /* ALPN is not needed. */
-    xCredentials.pAlpnProtos = NULL;
-
-    /* Set the server info. */
-    xServerInfo.pHostName = pxHostAddressData->pcHostAddress;
-    xServerInfo.port = clientcredentialMQTT_BROKER_PORT;
-
-    /* Set the members of the network info. */
-    xNetworkInfo.createNetworkConnection = true;
-    xNetworkInfo.u.setup.pNetworkServerInfo = &xServerInfo;
-    xNetworkInfo.u.setup.pNetworkCredentialInfo = &xCredentials;
-    xNetworkInfo.pNetworkInterface = pNetworkInterface;
-
-    /* Connect to the broker. */
-    xMqttConnectInfo.awsIotMqttMode = true;
-    xMqttConnectInfo.cleanSession = true;
-    xMqttConnectInfo.pClientIdentifier = ( const char * ) ( clientcredentialIOT_THING_NAME );
-    xMqttConnectInfo.clientIdentifierLength = ( uint16_t ) ( strlen( clientcredentialIOT_THING_NAME ) );
-    xMqttConnectInfo.keepAliveSeconds = ggdDEMO_KEEP_ALIVE_INTERVAL_SECONDS;
-
-    /* Call MQTT's CONNECT function. */
-    for( connectAttempt = 0; connectAttempt < ggdDEMO_NUM_TRIES; connectAttempt++ )
-    {
-        if( connectAttempt > 0 )
-        {
-            IotLogError( "Failed to establish MQTT connection, retrying in %d ms.",
-                         ggdDEMO_RETRY_WAIT_MS );
-            IotClock_SleepMs( ggdDEMO_RETRY_WAIT_MS );
-        }
-
-        IotLogInfo( "Attempting to establish MQTT connection to Greengrass." );
-        xMqttStatus = IotMqtt_Connect( &xNetworkInfo,
-                                       &xMqttConnectInfo,
-                                       _maxCommandTimeMs,
-                                       pMqttConnection );
-
-        if( xMqttStatus != IOT_MQTT_NETWORK_ERROR )
-        {
-            break;
-        }
-    }
-
-    return xMqttStatus;
 }
 
 /*-----------------------------------------------------------*/
@@ -806,9 +793,10 @@ static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterf
     /* TODO: Make this static buffer like other demos. */
     char * xBuffer = pvPortMalloc( 24000 );
 
+    /* TODO: Swap logic to reuse code with HTTP server connect. */
     xDemoStatus = prvConnectToServerWithBackoffRetries( &xNetworkContext );
 
-    xResult = MQTT_Init( &xMQTTContext, &xTransport, NULL, NULL, &xBuffer );
+    xResult = MQTT_Init( &xMQTTContext, &xTransport, prvGetTimeMs, prvEventCallback, &xBuffer );
     configASSERT( xResult == MQTTSuccess );
 
     /* Some fields are not used in this demo so start with everything at 0. */
@@ -847,12 +835,7 @@ static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterf
     {
         LogError( ( "Failed to establish MQTT connection: Server=%s, MQTTStatus=%s",
                     democonfigMQTT_BROKER_ENDPOINT, MQTT_Status_strerror( xResult ) ) );
-    }
-    else
-    {
-        /* Successfully established and MQTT connection with the broker. */
-        LogInfo( ( "An MQTT connection is established with %s.", democonfigMQTT_BROKER_ENDPOINT ) );
-        xStatus = pdPASS;
+        xDemoStatus = pdFAIL;
     }
 
     if( xDemoStatus == pdPASS )
@@ -860,35 +843,16 @@ static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterf
         LogInfo( ( "Greengrass device address is %s:%d.\n",
                    xHostAddressData.pcHostAddress,
                    xHostAddressData.usPort ) );
-        mqttStatus = _mqttConnect( &xHostAddressData, pNetworkInterface, &mqttConnection );
 
-        if( mqttStatus == IOT_MQTT_SUCCESS )
-        {
-            _sendMessageToGGC( mqttConnection );
+        /* TODO: Replace with coreMQTT _sendMessageToGGC( mqttConnection ); */
 
-            IotLogInfo( "Disconnecting from broker." );
+        IotLogInfo( "Disconnecting from broker." );
 
-            /* Call MQTT v2's DISCONNECT function. */
-            IotMqtt_Disconnect( mqttConnection, 0 );
-            SecureSocketsTransport_Disconnect( &xNetworkContext );
-            mqttConnection = IOT_MQTT_CONNECTION_INITIALIZER;
-            IotLogInfo( "Disconnected from the broker." );
-        }
-        else
-        {
-            IotLogError( "Could not connect to the Broker. Error %s.",
-                         IotMqtt_strerror( mqttStatus ) );
-            status = EXIT_FAILURE;
-        }
+        xResult = MQTT_Disconnect( &xMQTTContext );
+        SecureSocketsTransport_Disconnect( &xNetworkContext );
 
-        /* Report on space efficiency of this demo task. */
-        #if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 )
-            {
-                configPRINTF( ( "Heap low watermark: %u. Stack high watermark: %u.\r\n",
-                                xPortGetMinimumEverFreeHeapSize(),
-                                uxTaskGetStackHighWaterMark( NULL ) ) );
-            }
-        #endif
+        mqttConnection = IOT_MQTT_CONNECTION_INITIALIZER;
+        IotLogInfo( "Disconnected from the broker." );
     }
     else
     {
@@ -909,7 +873,6 @@ int vStartGreenGrassDiscoveryTask( bool awsIotMqttMode,
 {
     /* Return value of this function and the exit status of this program. */
     int status = EXIT_SUCCESS;
-    IotMqttError_t mqttInitStatus = IOT_MQTT_SUCCESS;
 
     /* Unused parameters */
     ( void ) awsIotMqttMode;
@@ -917,19 +880,7 @@ int vStartGreenGrassDiscoveryTask( bool awsIotMqttMode,
     ( void ) pNetworkServerInfo;
     ( void ) pNetworkCredentialInfo;
 
-    mqttInitStatus = IotMqtt_Init();
-
-    if( mqttInitStatus == IOT_MQTT_SUCCESS )
-    {
-        status = _discoverGreengrassCore( pNetworkInterface );
-        IotMqtt_Cleanup();
-        IotLogInfo( "Cleaned up MQTT library." );
-    }
-    else
-    {
-        IotLogError( "Failed to initialize MQTT library." );
-        status = EXIT_FAILURE;
-    }
+    status = _discoverGreengrassCore( pNetworkInterface );
 
     return status;
 }

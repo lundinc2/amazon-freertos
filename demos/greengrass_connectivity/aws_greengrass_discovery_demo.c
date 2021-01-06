@@ -71,7 +71,6 @@
 
 #define ggdDEMO_MAX_MQTT_MESSAGES              3
 #define ggdDEMO_MAX_MQTT_MSG_SIZE              500
-#define ggdDEMO_DISCOVERY_FILE_SIZE            2500
 #define ggdDEMO_MQTT_MSG_TOPIC                 "freertos/demos/ggd"
 #define ggdDEMO_MQTT_MSG_DISCOVERY             "{\"message\":\"Hello #%lu from FreeRTOS to Greengrass Core.\"}"
 
@@ -83,7 +82,7 @@
 /**
  * @brief The length in bytes of the user buffer.
  */
-#define democonfigUSER_BUFFER_LENGTH           ( 3500 )
+#define democonfigUSER_BUFFER_LENGTH           ( 2500 )
 
 /**
  * @brief HTTP command to retrieve JSON file from the Cloud.
@@ -132,6 +131,40 @@ static uint8_t ucUserBuffer[ democonfigUSER_BUFFER_LENGTH ];
  * @return pdPASS on successful connection, pdFAIL otherwise.
  */
 static BaseType_t prvConnectToServer( NetworkContext_t * pxNetworkContext );
+
+/**
+ * @brief Send an HTTP request based on a specified method and path, then
+ * print the response received from the server.
+ *
+ * @param[in] pxTransportInterface The transport interface for making network calls.
+ * @param[in] pcMethod The HTTP request method.
+ * @param[in] xMethodLen The length of the HTTP request method.
+ * @param[in] pcPath The Request-URI to the objects of interest.
+ * @param[in] xPathLen The length of the Request-URI.
+ * @param[out] ppcJSONFile The pointer to JSON file.
+ * @param[out] plJSONFileLength The length of the JSON file.
+ *
+ * @return pdFAIL on failure; pdPASS on success.
+ */
+static BaseType_t prvSendHttpRequest( const TransportInterface_t * pxTransportInterface,
+                                      const char * pcMethod,
+                                      size_t xMethodLen,
+                                      const char * pcPath,
+                                      size_t xPathLen,
+                                      char ** ppcJSONFile,
+                                      uint32_t * plJSONFileLength );
+
+/**
+ * @brief Get the JSON file containing the connection information to
+ * Greengrass core.
+ *
+ * @param[out] ppcJSONFile The pointer to JSON file.
+ * @param[out] plJSONFileLength The length of the JSON file.
+ *
+ * @return pdFAIL on failure; pdPASS on success.
+ */
+static BaseType_t prvGetGGCoreJSON( char ** ppcJSONFile,
+                                    uint32_t * plJSONFileLength );
 
 static IotMqttError_t _mqttConnect( GGD_HostAddressData_t * pxHostAddressData,
                                     const IotNetworkInterface_t * pNetworkInterface,
@@ -410,25 +443,15 @@ static BaseType_t prvSendHttpRequest( const TransportInterface_t * pxTransportIn
 
 /*-----------------------------------------------------------*/
 
-static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterface )
+static BaseType_t prvGetGGCoreJSON( char ** ppcJSONFile,
+                                    uint32_t * plJSONFileLength )
 {
-    int status = EXIT_SUCCESS;
-    BaseType_t xDemoStatus = pdFAIL;
-    IotMqttError_t mqttStatus = IOT_MQTT_SUCCESS;
-    GGD_HostAddressData_t xHostAddressData;
-    IotMqttConnection_t mqttConnection = IOT_MQTT_CONNECTION_INITIALIZER;
+    BaseType_t xStatus = pdFAIL;
     /* The transport layer interface used by the HTTP Client library. */
-    TransportInterface_t xTransportInterface;
+    TransportInterface_t xTransportInterface = { 0 };
     /* The network context for the transport layer interface. */
     NetworkContext_t xNetworkContext = { 0 };
     BaseType_t xIsConnectionEstablished = pdFALSE;
-    char * pcJSONFile;
-    uint32_t ulJSONFileLength = 0UL;
-
-    memset( &xHostAddressData, 0, sizeof( xHostAddressData ) );
-
-    /* Demonstrate automated connection. */
-    IotLogInfo( "Attempting automated selection of Greengrass device\r\n" );
 
     /**************************** Connect. ******************************/
 
@@ -438,10 +461,10 @@ static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterf
      * value is reached. The function returns pdFAIL if the TCP connection
      * cannot be established with the broker after the configured number of
      * attempts. */
-    xDemoStatus = connectToServerWithBackoffRetries( prvConnectToServer,
-                                                     &xNetworkContext );
+    xStatus = connectToServerWithBackoffRetries( prvConnectToServer,
+                                                 &xNetworkContext );
 
-    if( xDemoStatus == pdPASS )
+    if( xStatus == pdPASS )
     {
         /* Set a flag indicating that a TLS connection exists. */
         xIsConnectionEstablished = pdTRUE;
@@ -463,15 +486,15 @@ static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterf
     }
 
     /* Send HTTP requst to retrieve the JSON.*/
-    if( xDemoStatus == pdPASS )
+    if( xStatus == pdPASS )
     {
-        xDemoStatus = prvSendHttpRequest( &xTransportInterface,
-                                          HTTP_METHOD_GET,
-                                          strlen( HTTP_METHOD_GET ),
-                                          ggdDEMOHTTP_PATH,
-                                          strlen( ggdDEMOHTTP_PATH ),
-                                          &pcJSONFile,
-                                          &ulJSONFileLength );
+        xStatus = prvSendHttpRequest( &xTransportInterface,
+                                      HTTP_METHOD_GET,
+                                      strlen( HTTP_METHOD_GET ),
+                                      ggdDEMOHTTP_PATH,
+                                      strlen( ggdDEMOHTTP_PATH ),
+                                      ppcJSONFile,
+                                      plJSONFileLength );
     }
 
     /* Disconnect the connection from the AWS IoT broker endpoint. */
@@ -480,6 +503,31 @@ static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterf
         SecureSocketsTransport_Disconnect( &xNetworkContext );
     }
 
+    return xStatus;
+}
+/*-----------------------------------------------------------*/
+
+static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterface )
+{
+    int status = EXIT_SUCCESS;
+    BaseType_t xDemoStatus = pdFAIL;
+    IotMqttError_t mqttStatus = IOT_MQTT_SUCCESS;
+    GGD_HostAddressData_t xHostAddressData;
+    IotMqttConnection_t mqttConnection = IOT_MQTT_CONNECTION_INITIALIZER;
+    char * pcJSONFile;
+    uint32_t ulJSONFileLength = 0UL;
+
+    memset( &xHostAddressData, 0, sizeof( xHostAddressData ) );
+
+    /* Demonstrate automated connection. */
+    IotLogInfo( "Attempting automated selection of Greengrass device\r\n" );
+
+    /* Retrieve the Greengrass core connection details as a JSON by sending an
+     * HTTP GET request. */
+    xDemoStatus = prvGetGGCoreJSON( &pcJSONFile, &ulJSONFileLength );
+
+    /* Parse the JSON to obtain the IP address, port and credentials of the
+     * Green grass core. */
     if( xDemoStatus == pdPASS )
     {
         xDemoStatus = GGD_GetIPandCertificateFromJSON( pcJSONFile,
@@ -491,12 +539,9 @@ static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterf
 
     if( xDemoStatus == pdPASS )
     {
-        LogInfo( ( "Host Address obtained is %s:%d", xHostAddressData.pcHostAddress, xHostAddressData.usPort ) );
-    }
-
-    if( xDemoStatus == pdPASS )
-    {
-        IotLogInfo( "Greengrass device discovered." );
+        LogInfo( ( "Greengrass device address is %s:%d.\n",
+                   xHostAddressData.pcHostAddress,
+                   xHostAddressData.usPort ) );
         mqttStatus = _mqttConnect( &xHostAddressData, pNetworkInterface, &mqttConnection );
 
         if( mqttStatus == IOT_MQTT_SUCCESS )

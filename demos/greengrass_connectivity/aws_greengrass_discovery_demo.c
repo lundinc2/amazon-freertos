@@ -528,6 +528,7 @@ static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterf
     BaseType_t xDemoStatus = pdFAIL;
     IotMqttError_t mqttStatus = IOT_MQTT_SUCCESS;
     GGD_HostAddressData_t xHostAddressData;
+    HostParameters_t xHostParameters;
     IotMqttConnection_t mqttConnection = IOT_MQTT_CONNECTION_INITIALIZER;
     char * pcJSONFile;
     uint32_t ulJSONFileLength = 0UL;
@@ -547,7 +548,7 @@ static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterf
     {
         xDemoStatus = GGD_GetIPandCertificateFromJSON( pcJSONFile,
                                                        ulJSONFileLength,
-                                                       NULL,
+                                                       &xHostParameters,
                                                        &xHostAddressData,
                                                        pdTRUE );
     }

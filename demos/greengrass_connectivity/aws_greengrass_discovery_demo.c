@@ -41,9 +41,6 @@
 /* Temporary include for demo config TODO: Remove */
 #include "mqtt_demo_mutual_auth_config.h"
 
-/* Set up logging for this demo. */
-#include "iot_demo_logging.h"
-
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
@@ -57,10 +54,10 @@
 /* Transport interface implementation include header for TLS. */
 #include "transport_secure_sockets.h"
 
-/* JSON includes. */
+/* JSON include. */
 #include "core_json.h"
 
-/* Includes for initialization. */
+/* MQTT include. */
 #include "core_mqtt.h"
 
 /* Include header for root CA certificates. */
@@ -95,10 +92,10 @@
 /**
  * @brief The port to use for the demo.
  */
-    #define democonfigMQTT_BROKER_PORT         clientcredentialMQTT_BROKER_PORT
+    #define democonfigMQTT_BROKER_PORT    clientcredentialMQTT_BROKER_PORT
 #endif
 
-#define mqttexampleCONNACK_RECV_TIMEOUT_MS     ( 1000U )
+/* GGD Demo macros. */
 #define ggdDEMO_MAX_MQTT_MESSAGES              3
 #define ggdDEMO_MAX_MQTT_MSG_SIZE              500
 #define ggdDEMO_MQTT_MSG_TOPIC                 "freertos/demos/ggd"
@@ -121,20 +118,42 @@
     "GET /greengrass/discover/thing/%s" \
     " HTTP/1.1\r\n\r\n"
 
-#define ggdDEMOHTTP_PATH                         "/greengrass/discover/thing/" clientcredentialIOT_THING_NAME
+#define ggdDEMOHTTP_PATH    "/greengrass/discover/thing/" clientcredentialIOT_THING_NAME
 
-#define mqttexampleKEEP_ALIVE_TIMEOUT_SECONDS    ( 60U )
 
 /**
  * @brief Milliseconds per second.
  */
-#define MILLISECONDS_PER_SECOND                  ( 1000U )
+#define MILLISECONDS_PER_SECOND              ( 1000U )
+
+/**
+ * @brief Greengrass keep alive time out in seconds.
+ */
+#define ggdmqttKEEP_ALIVE_TIMEOUT_SECONDS    ( 60U )
+
+/**
+ * @brief Milliseconds per second.
+ */
+#define ggdmqttCONNACK_RECV_TIMEOUT_MS       ( 1000U )
 
 
 /**
  * @brief Milliseconds per FreeRTOS tick.
  */
 #define MILLISECONDS_PER_TICK    ( MILLISECONDS_PER_SECOND / configTICK_RATE_HZ )
+
+/**
+ * @brief Each compilation unit that consumes the NetworkContext must define it.
+ * It should contain a single pointer to the type of your desired transport.
+ * When using multiple transports in the same compilation unit, define this pointer as void *.
+ *
+ * @note Transport stacks are defined in amazon-freertos/libraries/abstractions/transport/secure_sockets/transport_secure_sockets.h.
+ */
+struct NetworkContext
+{
+    SecureSocketsTransportParams_t * pParams;
+};
+
 
 /**
  * @brief Global entry time into the application to use as a reference timestamp
@@ -151,23 +170,6 @@ static uint32_t ulGlobalEntryTimeMs;
 static uint16_t usPublishPacketIdentifier;
 
 /**
- * @brief Each compilation unit that consumes the NetworkContext must define it.
- * It should contain a single pointer to the type of your desired transport.
- * When using multiple transports in the same compilation unit, define this pointer as void *.
- *
- * @note Transport stacks are defined in amazon-freertos/libraries/abstractions/transport/secure_sockets/transport_secure_sockets.h.
- */
-struct NetworkContext
-{
-    SecureSocketsTransportParams_t * pParams;
-};
-
-/* The maximum time to wait for an MQTT operation to complete.  Needs to be
- * long enough for the TLS negotiation to complete. */
-static const uint32_t _maxCommandTimeMs = 20000UL;
-static const uint32_t _timeBetweenPublishMs = 1500UL;
-
-/**
  * @brief A buffer used in the demo for storing HTTP request headers and
  * HTTP response headers and body.
  *
@@ -178,13 +180,27 @@ static const uint32_t _timeBetweenPublishMs = 1500UL;
 static uint8_t ucUserBuffer[ democonfigUSER_BUFFER_LENGTH ];
 
 /**
+ * @brief Static buffer used to hold MQTT messages being sent and received.
+ */
+static uint8_t ucSharedBuffer[ democonfigNETWORK_BUFFER_SIZE ];
+
+/** @brief Static buffer used to hold MQTT messages being sent and received. */
+static MQTTFixedBuffer_t xBuffer =
+{
+    ucSharedBuffer,
+    democonfigNETWORK_BUFFER_SIZE
+};
+
+/**
  * @brief Connect to HTTP server with reconnection retries.
  *
  * @param[out] pxNetworkContext The output parameter to return the created network context.
  *
  * @return pdPASS on successful connection, pdFAIL otherwise.
  */
-static BaseType_t prvConnectToServer( NetworkContext_t * pxNetworkContext );
+static BaseType_t prvConnectToServer( NetworkContext_t * pxNetworkContext,
+                                      SocketsConfig_t * pxSocketsConfig,
+                                      ServerInfo_t * pxServerInfo );
 
 /**
  * @brief Send an HTTP request based on a specified method and path, then
@@ -220,8 +236,21 @@ static BaseType_t prvSendHttpRequest( const TransportInterface_t * pxTransportIn
 static BaseType_t prvGetGGCoreJSON( char ** ppcJSONFile,
                                     uint32_t * plJSONFileLength );
 
-static void _sendMessageToGGC( MQTTContext_t * pxMQTTContext );
-static int _discoverGreengrassCore();
+/**
+ * @brief Send MQTT messages to Greengrass core.
+ *
+ * @param[in] pxMQTTContext The pointer to coreMQTT context.
+ *
+ * @return pdFAIL on failure; pdPASS on success.
+ */
+static BaseType_t _sendMessageToGGC( MQTTContext_t * pxMQTTContext );
+
+/**
+ * @brief Logic for Greengrass discovery demo.
+ *
+ * @return pdFAIL on failure; pdPASS on success.
+ */
+static int _discoverGreengrassCoreDemo();
 
 static uint32_t prvGetTimeMs( void )
 {
@@ -245,18 +274,9 @@ static void prvEventCallback( MQTTContext_t * pxMQTTContext,
                               MQTTPacketInfo_t * pxPacketInfo,
                               MQTTDeserializedInfo_t * pxDeserializedInfo )
 {
-    /* The MQTT context is not used for this demo. */
     ( void ) pxMQTTContext;
-
-    if( ( pxPacketInfo->type & 0xF0U ) == MQTT_PACKET_TYPE_PUBLISH )
-    {
-        /* TODO */
-        /*prvMQTTProcessIncomingPublish( pxDeserializedInfo->pPublishInfo ); */
-    }
-    else
-    {
-        /*prvMQTTProcessResponse( pxPacketInfo, pxDeserializedInfo->packetIdentifier ); */
-    }
+    ( void ) pxPacketInfo;
+    ( void ) pxDeserializedInfo;
 }
 
 /*-----------------------------------------------------------*/
@@ -288,7 +308,7 @@ static uint32_t prvConvertCertificateJSONToString( char * certbuf,
 }
 
 static BaseType_t prvGGDGetCertificate( char * pcJSONFile,
-                                        const uint32_t ulJSONFileSize,
+                                        uint32_t ulJSONFileSize,
                                         char ** pucCert,
                                         size_t * pulCertLen )
 {
@@ -302,7 +322,6 @@ static BaseType_t prvGGDGetCertificate( char * pcJSONFile,
     size_t valueLength;
     JSONStatus_t result;
     char * certbuf = NULL;
-    uint32_t ulReadIndex = 1, ulWriteIndex = 0;
 
     result = JSON_Search( pcJSONFile,
                           ulJSONFileSize,
@@ -331,8 +350,6 @@ static BaseType_t prvGGDGetIPOnInterface( char * pcJSONFile,
                                           ServerInfo_t * pucTargetInterface )
 {
     BaseType_t xStatus = pdFAIL;
-    BaseType_t xFoundIP = pdFALSE;
-    BaseType_t xFoundPort = pdFALSE;
     char hostAddressQuery[] = "GGGroups[0].Cores[0].Connectivity[0].HostAddress";
     char hostPortQuery[] = "GGGroups[0].Cores[0].Connectivity[0].PortNumber";
     size_t hostAddressQueryLength = sizeof( hostAddressQuery ) - 1;
@@ -354,11 +371,9 @@ static BaseType_t prvGGDGetIPOnInterface( char * pcJSONFile,
         memset( addressbuf, 0x00, valueLength + 1 );
         memcpy( addressbuf, value, valueLength );
 
-        /*pucTargetInterface->pHostName = FreeRTOS_inet_addr( addressbuf ); */
         pucTargetInterface->pHostName = addressbuf;
         pucTargetInterface->hostNameLength = valueLength;
         xStatus = pdPASS;
-        xFoundIP = pdTRUE;
     }
 
     value = NULL;
@@ -376,13 +391,12 @@ static BaseType_t prvGGDGetIPOnInterface( char * pcJSONFile,
         /* TODO: Define the 10 in a macro. */
         pucTargetInterface->port = strtoul( value, NULL, 10 );
         xStatus = pdPASS;
-        xFoundIP = pdTRUE;
     }
 
     return xStatus;
 }
 
-static void _sendMessageToGGC( MQTTContext_t * pxMQTTContext )
+static BaseType_t _sendMessageToGGC( MQTTContext_t * pxMQTTContext )
 {
     const char * pcTopic = ggdDEMO_MQTT_MSG_TOPIC;
     uint32_t ulMessageCounter;
@@ -426,40 +440,27 @@ static void _sendMessageToGGC( MQTTContext_t * pxMQTTContext )
 
 /*-----------------------------------------------------------*/
 
-static BaseType_t prvConnectToServer( NetworkContext_t * pxNetworkContext )
+static BaseType_t prvConnectToServer( NetworkContext_t * pxNetworkContext,
+                                      SocketsConfig_t * pxSocketsConfig,
+                                      ServerInfo_t * pxServerInfo )
 {
-    ServerInfo_t xServerInfo = { 0 };
-    SocketsConfig_t xSocketsConfig = { 0 };
     BaseType_t xStatus = pdPASS;
     TransportSocketStatus_t xNetworkStatus = TRANSPORT_SOCKET_STATUS_SUCCESS;
 
-    /* Initializer server information. */
-    xServerInfo.pHostName = clientcredentialMQTT_BROKER_ENDPOINT;
-    xServerInfo.hostNameLength = strlen( clientcredentialMQTT_BROKER_ENDPOINT );
-    xServerInfo.port = clientcredentialGREENGRASS_DISCOVERY_PORT;
 
-    /* Configure credentials for TLS mutual authenticated session. */
-    xSocketsConfig.enableTls = true;
-    xSocketsConfig.pAlpnProtos = NULL;
-    xSocketsConfig.maxFragmentLength = 0;
-    xSocketsConfig.disableSni = false;
-    xSocketsConfig.pRootCa = tlsATS1_ROOT_CERTIFICATE_PEM;
-    xSocketsConfig.rootCaSize = sizeof( tlsATS1_ROOT_CERTIFICATE_PEM );
-    xSocketsConfig.sendTimeoutMs = 1000;
-    xSocketsConfig.recvTimeoutMs = 1000;
 
     /* Establish a TLS session with the HTTP server. This example connects to
      * the HTTP server as specified in democonfigAWS_IOT_ENDPOINT and
      * democonfigAWS_HTTP_PORT in http_demo_mutual_auth_config.h. */
-    IotLogInfo( "Establishing a TLS session to %.*s:%d.",
-                ( int32_t ) strlen( clientcredentialMQTT_BROKER_ENDPOINT ),
-                clientcredentialMQTT_BROKER_ENDPOINT,
-                clientcredentialGREENGRASS_DISCOVERY_PORT );
+    LogInfo( ( "Establishing a TLS session to %.*s:%d.",
+               ( int32_t ) strlen( clientcredentialMQTT_BROKER_ENDPOINT ),
+               clientcredentialMQTT_BROKER_ENDPOINT,
+               clientcredentialGREENGRASS_DISCOVERY_PORT ) );
 
     /* Attempt to create a mutually authenticated TLS connection. */
     xNetworkStatus = SecureSocketsTransport_Connect( pxNetworkContext,
-                                                     &xServerInfo,
-                                                     &xSocketsConfig );
+                                                     pxServerInfo,
+                                                     pxSocketsConfig );
 
     if( xNetworkStatus != TRANSPORT_SOCKET_STATUS_SUCCESS )
     {
@@ -527,16 +528,16 @@ static BaseType_t prvSendHttpRequest( const TransportInterface_t * pxTransportIn
         xResponse.pBuffer = ucUserBuffer;
         xResponse.bufferLen = democonfigUSER_BUFFER_LENGTH;
 
-        IotLogInfo( "Sending HTTP %.*s request to %.*s%.*s...",
-                    ( int32_t ) xRequestInfo.methodLen, xRequestInfo.pMethod,
-                    ( int32_t ) strlen( clientcredentialMQTT_BROKER_ENDPOINT ),
-                    clientcredentialMQTT_BROKER_ENDPOINT,
-                    ( int32_t ) xRequestInfo.pathLen,
-                    xRequestInfo.pPath );
-        IotLogDebug( "Request Headers:\n%.*s\n"
-                     "Request Body:\n%.*s\n",
-                     ( int32_t ) xRequestHeaders.headersLen,
-                     ( char * ) xRequestHeaders.pBuffer );
+        LogInfo( ( "Sending HTTP %.*s request to %.*s%.*s...",
+                   ( int32_t ) xRequestInfo.methodLen, xRequestInfo.pMethod,
+                   ( int32_t ) strlen( clientcredentialMQTT_BROKER_ENDPOINT ),
+                   clientcredentialMQTT_BROKER_ENDPOINT,
+                   ( int32_t ) xRequestInfo.pathLen,
+                   xRequestInfo.pPath ) );
+        LogDebug( ( "Request Headers:\n%.*s\n"
+                    "Request Body:\n%.*s\n",
+                    ( int32_t ) xRequestHeaders.headersLen,
+                    ( char * ) xRequestHeaders.pBuffer ) );
 
         /* Send the request and receive the response. */
         xHTTPStatus = HTTPClient_Send( pxTransportInterface,
@@ -548,8 +549,8 @@ static BaseType_t prvSendHttpRequest( const TransportInterface_t * pxTransportIn
     }
     else
     {
-        IotLogError( "Failed to initialize HTTP request headers: Error=%s.",
-                     HTTPClient_strerror( xHTTPStatus ) );
+        LogError( ( "Failed to initialize HTTP request headers: Error=%s.",
+                    HTTPClient_strerror( xHTTPStatus ) ) );
     }
 
     if( xHTTPStatus == HTTPSuccess )
@@ -598,8 +599,29 @@ static BaseType_t prvGetGGCoreJSON( char ** ppcJSONFile,
     BaseType_t xStatus = pdFAIL;
     /* The transport layer interface used by the HTTP Client library. */
     TransportInterface_t xTransportInterface = { 0 };
+
     /* The network context for the transport layer interface. */
     NetworkContext_t xNetworkContext = { 0 };
+
+    /* Configure credentials for TLS mutual authenticated session. */
+    SocketsConfig_t xSocketsConfig = { 0 };
+
+    xSocketsConfig.enableTls = true;
+    xSocketsConfig.pAlpnProtos = NULL;
+    xSocketsConfig.maxFragmentLength = 0;
+    xSocketsConfig.disableSni = false;
+    xSocketsConfig.pRootCa = tlsATS1_ROOT_CERTIFICATE_PEM;
+    xSocketsConfig.rootCaSize = sizeof( tlsATS1_ROOT_CERTIFICATE_PEM );
+    xSocketsConfig.sendTimeoutMs = 1000;
+    xSocketsConfig.recvTimeoutMs = 1000;
+
+    /* Initializer server information. */
+    ServerInfo_t xServerInfo;
+
+    xServerInfo.pHostName = clientcredentialMQTT_BROKER_ENDPOINT;
+    xServerInfo.hostNameLength = strlen( clientcredentialMQTT_BROKER_ENDPOINT );
+    xServerInfo.port = clientcredentialGREENGRASS_DISCOVERY_PORT;
+
     BaseType_t xIsConnectionEstablished = pdFALSE;
     SecureSocketsTransportParams_t secureSocketsTransportParams = { 0 };
 
@@ -614,7 +636,9 @@ static BaseType_t prvGetGGCoreJSON( char ** ppcJSONFile,
      * cannot be established with the broker after the configured number of
      * attempts. */
     xStatus = connectToServerWithBackoffRetries( prvConnectToServer,
-                                                 &xNetworkContext );
+                                                 &xNetworkContext,
+                                                 &xSocketsConfig,
+                                                 &xServerInfo );
 
     if( xStatus == pdPASS )
     {
@@ -626,15 +650,15 @@ static BaseType_t prvGetGGCoreJSON( char ** ppcJSONFile,
         xTransportInterface.send = SecureSocketsTransport_Send;
         xTransportInterface.recv = SecureSocketsTransport_Recv;
 
-        IotLogInfo( "Connection established....\r\n" );
+        LogInfo( ( "Connection established....\r\n" ) );
     }
     else
     {
         /* Log error to indicate connection failure after all
          * reconnect attempts are over. */
-        IotLogError( "Failed to connect to HTTP server %.*s.",
-                     ( int32_t ) strlen( clientcredentialMQTT_BROKER_ENDPOINT ),
-                     clientcredentialMQTT_BROKER_ENDPOINT );
+        LogError( ( "Failed to connect to HTTP server %.*s.",
+                    ( int32_t ) strlen( clientcredentialMQTT_BROKER_ENDPOINT ),
+                    clientcredentialMQTT_BROKER_ENDPOINT ) );
     }
 
     /* Send HTTP requst to retrieve the JSON.*/
@@ -659,26 +683,39 @@ static BaseType_t prvGetGGCoreJSON( char ** ppcJSONFile,
 }
 /*-----------------------------------------------------------*/
 
-static BaseType_t prvConnectToServerWithBackoffRetries( NetworkContext_t * pxNetworkContext )
+static int _discoverGreengrassCoreDemo()
 {
-    ServerInfo_t xServerInfo = { 0 };
-
-    SocketsConfig_t xSocketsConfig = { 0 };
-    BaseType_t xStatus = pdPASS;
-    TransportSocketStatus_t xNetworkStatus = TRANSPORT_SOCKET_STATUS_SUCCESS;
-    BaseType_t xBackoffStatus = pdFALSE;
-    BaseType_t xDemoStatus = pdFALSE;
+    int status = EXIT_SUCCESS;
+    MQTTStatus_t xResult;
+    BaseType_t xDemoStatus = pdFAIL;
+    NetworkContext_t xNetworkContext = { 0 };
+    SecureSocketsTransportParams_t secureSocketsTransportParams = { 0 };
+    bool xSessionPresent;
     char * pcJSONFile = NULL;
-    uint32_t * ulJSONFileLength = 0;
+    uint32_t ulJSONFileLength = 0;
 
+    xNetworkContext.pParams = &secureSocketsTransportParams;
+
+    MQTTContext_t xMQTTContext;
+    MQTTConnectInfo_t xConnectInfo;
+    TransportInterface_t xTransport;
+    BaseType_t xStatus = pdFAIL;
+
+    xTransport.pNetworkContext = &xNetworkContext;
+    xTransport.send = SecureSocketsTransport_Send;
+    xTransport.recv = SecureSocketsTransport_Recv;
 
     /* Set the credentials for establishing a TLS connection. */
     /* Initializer server information. */
+    ServerInfo_t xServerInfo = { 0 };
+
     xServerInfo.pHostName = democonfigMQTT_BROKER_ENDPOINT;
     xServerInfo.hostNameLength = strlen( democonfigMQTT_BROKER_ENDPOINT );
     xServerInfo.port = democonfigMQTT_BROKER_PORT;
 
     /* Configure credentials for TLS mutual authenticated session. */
+    SocketsConfig_t xSocketsConfig = { 0 };
+
     xSocketsConfig.enableTls = true;
     xSocketsConfig.pAlpnProtos = NULL;
     xSocketsConfig.maxFragmentLength = 0;
@@ -688,7 +725,7 @@ static BaseType_t prvConnectToServerWithBackoffRetries( NetworkContext_t * pxNet
     xSocketsConfig.recvTimeoutMs = 60;
 
     /* Demonstrate automated connection. */
-    IotLogInfo( "Attempting automated selection of Greengrass device\r\n" );
+    LogInfo( ( "Attempting automated selection of Greengrass device\r\n" ) );
 
     /* Retrieve the Greengrass core connection details as a JSON by sending an
      * HTTP GET request. */
@@ -719,56 +756,10 @@ static BaseType_t prvConnectToServerWithBackoffRetries( NetworkContext_t * pxNet
         }
     }
 
-    /* Establish a TLS session with the MQTT broker. This example connects to
-     * the MQTT broker as specified in democonfigMQTT_BROKER_ENDPOINT and
-     * democonfigMQTT_BROKER_PORT at the top of this file. */
-    LogInfo( ( "Creating a TLS connection to %s:%u.",
-               democonfigMQTT_BROKER_ENDPOINT,
-               democonfigMQTT_BROKER_PORT ) );
-    /* Attempt to create a mutually authenticated TLS connection. */
-    xNetworkStatus = SecureSocketsTransport_Connect( pxNetworkContext,
-                                                     &xServerInfo,
-                                                     &xSocketsConfig );
-
-    if( xNetworkStatus != TRANSPORT_SOCKET_STATUS_SUCCESS )
-    {
-        LogError( ( "Connection to the broker failed. Attempting connection retry after backoff delay." ) );
-        xStatus = pdFAIL;
-    }
-
-    return xStatus;
-}
-/*-----------------------------------------------------------*/
-
-static int _discoverGreengrassCore()
-{
-    int status = EXIT_SUCCESS;
-    MQTTStatus_t xResult;
-    BaseType_t xDemoStatus = pdFAIL;
-    TransportInterface_t xTransportInterface = { 0 };
-    NetworkContext_t xNetworkContext = { 0 };
-    SecureSocketsTransportParams_t secureSocketsTransportParams = { 0 };
-    bool xSessionPresent;
-
-    xNetworkContext.pParams = &secureSocketsTransportParams;
-    xTransportInterface.pNetworkContext = &xNetworkContext;
-    xTransportInterface.send = SecureSocketsTransport_Send;
-    xTransportInterface.recv = SecureSocketsTransport_Recv;
-
-    MQTTContext_t xMQTTContext;
-    MQTTConnectInfo_t xConnectInfo;
-    TransportInterface_t xTransport;
-    BaseType_t xStatus = pdFAIL;
-
-    xTransport.pNetworkContext = &xNetworkContext;
-    xTransport.send = SecureSocketsTransport_Send;
-    xTransport.recv = SecureSocketsTransport_Recv;
-
-    /* TODO: Make this static buffer like other demos. */
-    char * xBuffer = pvPortMalloc( 24000 );
-
-    /* TODO: Swap logic to reuse code with HTTP server connect. */
-    xDemoStatus = prvConnectToServerWithBackoffRetries( &xNetworkContext );
+    xStatus = connectToServerWithBackoffRetries( prvConnectToServer,
+                                                 &xNetworkContext,
+                                                 &xSocketsConfig,
+                                                 &xServerInfo );
 
     xResult = MQTT_Init( &xMQTTContext, &xTransport, prvGetTimeMs, prvEventCallback, &xBuffer );
     configASSERT( xResult == MQTTSuccess );
@@ -795,14 +786,14 @@ static int _discoverGreengrassCore()
 
     /* Set MQTT keep-alive period. If the application does not send packets at an interval less than
      * the keep-alive period, the MQTT library will send PINGREQ packets. */
-    xConnectInfo.keepAliveSeconds = mqttexampleKEEP_ALIVE_TIMEOUT_SECONDS;
+    xConnectInfo.keepAliveSeconds = ggdmqttKEEP_ALIVE_TIMEOUT_SECONDS;
 
     /* Send MQTT CONNECT packet to broker. LWT is not used in this demo, so it
      * is passed as NULL. */
     xResult = MQTT_Connect( &xMQTTContext,
                             &xConnectInfo,
                             NULL,
-                            mqttexampleCONNACK_RECV_TIMEOUT_MS,
+                            ggdmqttCONNACK_RECV_TIMEOUT_MS,
                             &xSessionPresent );
 
     if( xResult != MQTTSuccess )
@@ -816,15 +807,15 @@ static int _discoverGreengrassCore()
     {
         _sendMessageToGGC( &xMQTTContext );
 
-        IotLogInfo( "Disconnecting from broker." );
+        LogInfo( ( "Disconnecting from broker." ) );
 
         xResult = MQTT_Disconnect( &xMQTTContext );
         SecureSocketsTransport_Disconnect( &xNetworkContext );
-        IotLogInfo( "Disconnected from the broker." );
+        LogInfo( ( "Disconnected from the broker." ) );
     }
     else
     {
-        IotLogError( "Auto-connect: Failed to retrieve Greengrass address and certificate." );
+        LogError( ( "Auto-connect: Failed to retrieve Greengrass address and certificate." ) );
         status = EXIT_FAILURE;
     }
 
@@ -849,7 +840,7 @@ int vStartGreenGrassDiscoveryTask( bool awsIotMqttMode,
     ( void ) pNetworkCredentialInfo;
     ( void ) pNetworkInterface;
 
-    status = _discoverGreengrassCore();
+    status = _discoverGreengrassCoreDemo();
 
     return status;
 }

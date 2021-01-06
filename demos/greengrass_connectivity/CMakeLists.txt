@@ -10,9 +10,25 @@ afr_module_sources(
     INTERFACE
         "${CMAKE_CURRENT_LIST_DIR}/aws_greengrass_discovery_demo.c"
 )
+
+afr_module_include_dirs(
+    ${AFR_CURRENT_MODULE}
+    INTERFACE
+        ${AFR_DEMOS_DIR}/common/http_demo_helpers
+)
+
 afr_module_dependencies(
     ${AFR_CURRENT_MODULE}
     INTERFACE
         AFR::greengrass
         AFR::mqtt
+        AFR::http_demo_helpers
+        AFR::core_http
+        AFR::backoff_algorithm
+        AFR::transport_interface_secure_sockets
+        AFR::secure_sockets
+        # Add dependency on the core_http_demo_dependencies metadata module 
+        # so that FreeRTOS console shows this demo ONLY when the core HTTP library
+        # is selected on the console.
+        AFR::core_http_demo_dependencies
 )

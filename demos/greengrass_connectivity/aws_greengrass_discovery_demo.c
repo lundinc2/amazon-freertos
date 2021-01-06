@@ -108,6 +108,18 @@ typedef struct
     char * pcTopic;                     /**< Topic to subscribe and publish to. */
 } GGDUserData_t;
 
+/**
+ * @brief Each compilation unit that consumes the NetworkContext must define it.
+ * It should contain a single pointer to the type of your desired transport.
+ * When using multiple transports in the same compilation unit, define this pointer as void *.
+ *
+ * @note Transport stacks are defined in amazon-freertos/libraries/abstractions/transport/secure_sockets/transport_secure_sockets.h.
+ */
+struct NetworkContext
+{
+    SecureSocketsTransportParams_t * pParams;
+};
+
 /* The maximum time to wait for an MQTT operation to complete.  Needs to be
  * long enough for the TLS negotiation to complete. */
 static const uint32_t _maxCommandTimeMs = 20000UL;
@@ -452,6 +464,9 @@ static BaseType_t prvGetGGCoreJSON( char ** ppcJSONFile,
     /* The network context for the transport layer interface. */
     NetworkContext_t xNetworkContext = { 0 };
     BaseType_t xIsConnectionEstablished = pdFALSE;
+    SecureSocketsTransportParams_t secureSocketsTransportParams = { 0 };
+
+    xNetworkContext.pParams = &secureSocketsTransportParams;
 
     /**************************** Connect. ******************************/
 

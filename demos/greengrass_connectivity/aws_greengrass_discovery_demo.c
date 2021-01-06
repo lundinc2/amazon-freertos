@@ -38,9 +38,6 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Demo include. */
-#include "aws_demo_config.h"
-
 /* Temporary include for demo config TODO: Remove */
 #include "mqtt_demo_mutual_auth_config.h"
 
@@ -50,14 +47,9 @@
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
 #include "task.h"
-#include "semphr.h"
-#include "platform/iot_network.h"
-#include "platform/iot_network_freertos.h"
-#include "platform/iot_clock.h"
 
 /* Include AWS IoT metrics macros header. */
 #include "aws_iot_metrics.h"
-
 
 /* Common HTTP demo utilities. */
 #include "http_demo_utils.h"
@@ -65,17 +57,11 @@
 /* Transport interface implementation include header for TLS. */
 #include "transport_secure_sockets.h"
 
-/* Greengrass includes. */
-#include "aws_ggd_config.h"
-#include "aws_ggd_config_defaults.h"
-#include "aws_greengrass_discovery.h"
-
 /* JSON includes. */
 #include "core_json.h"
 
 /* Includes for initialization. */
 #include "core_mqtt.h"
-#include "iot_mqtt.h"
 
 /* Include header for root CA certificates. */
 #include "iot_default_root_certificates.h"
@@ -159,18 +145,10 @@
 static uint32_t ulGlobalEntryTimeMs;
 
 /**
- * @brief Contains the user data for callback processing.
+ * @brief Packet Identifier generated when Publish request was sent to the broker;
+ * it is used to match received Publish ACK to the transmitted Publish packet.
  */
-typedef struct
-{
-    const char * pcExpectedString;      /**< Informs the MQTT callback of the next expected string. */
-    BaseType_t xCallbackStatus;         /**< Used to communicate the success or failure of the callback function.
-                                         * xCallbackStatus is set to pdFALSE before the callback is executed, and is
-                                         * set to pdPASS inside the callback only if the callback receives the expected
-                                         * data. */
-    SemaphoreHandle_t xWakeUpSemaphore; /**< Handle of semaphore to wake up the task. */
-    char * pcTopic;                     /**< Topic to subscribe and publish to. */
-} GGDUserData_t;
+static uint16_t usPublishPacketIdentifier;
 
 /**
  * @brief Each compilation unit that consumes the NetworkContext must define it.
@@ -242,8 +220,8 @@ static BaseType_t prvSendHttpRequest( const TransportInterface_t * pxTransportIn
 static BaseType_t prvGetGGCoreJSON( char ** ppcJSONFile,
                                     uint32_t * plJSONFileLength );
 
-static void _sendMessageToGGC( IotMqttConnection_t mqttConnection );
-static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterface );
+static void _sendMessageToGGC( MQTTContext_t * pxMQTTContext );
+static int _discoverGreengrassCore();
 
 static uint32_t prvGetTimeMs( void )
 {
@@ -282,11 +260,6 @@ static void prvEventCallback( MQTTContext_t * pxMQTTContext,
 }
 
 /*-----------------------------------------------------------*/
-static BaseType_t prvGGDGetCertificate( char * pcJSONFile,
-                                        const uint32_t ulJSONFileSize,
-                                        const HostParameters_t * pxHostParameters,
-                                        const BaseType_t xAutoSelectFlag,
-                                        GGD_HostAddressData_t * pxHostAddressData );
 static uint32_t prvConvertCertificateJSONToString( char * certbuf,
                                                    size_t certlen )
 {
@@ -409,41 +382,46 @@ static BaseType_t prvGGDGetIPOnInterface( char * pcJSONFile,
     return xStatus;
 }
 
-static void _sendMessageToGGC( IotMqttConnection_t mqttConnection )
+static void _sendMessageToGGC( MQTTContext_t * pxMQTTContext )
 {
     const char * pcTopic = ggdDEMO_MQTT_MSG_TOPIC;
     uint32_t ulMessageCounter;
     char cBuffer[ ggdDEMO_MAX_MQTT_MSG_SIZE ];
-    IotMqttError_t xMqttStatus = IOT_MQTT_STATUS_PENDING;
-    IotMqttPublishInfo_t xPublishInfo = IOT_MQTT_PUBLISH_INFO_INITIALIZER;
+    MQTTStatus_t xResult;
+    MQTTPublishInfo_t xMQTTPublishInfo;
+    BaseType_t xStatus = pdPASS;
 
+    /* Some fields are not used by this demo so start with everything at 0. */
+    ( void ) memset( ( void * ) &xMQTTPublishInfo, 0x00, sizeof( xMQTTPublishInfo ) );
 
-    /* Publish to the topic to which this task is subscribed in order
-     * to receive back the data that was published. */
-    xPublishInfo.qos = IOT_MQTT_QOS_0;
-    xPublishInfo.pTopicName = pcTopic;
-    xPublishInfo.topicNameLength = ( uint16_t ) ( strlen( pcTopic ) );
+    /* This demo uses QoS0. */
+    xMQTTPublishInfo.qos = MQTTQoS0;
+    xMQTTPublishInfo.retain = false;
+    xMQTTPublishInfo.pTopicName = pcTopic;
+    xMQTTPublishInfo.topicNameLength = ( uint16_t ) strlen( pcTopic );
 
     for( ulMessageCounter = 0; ulMessageCounter < ( uint32_t ) ggdDEMO_MAX_MQTT_MESSAGES; ulMessageCounter++ )
     {
-        /* Set the members of the publish info. */
-        xPublishInfo.payloadLength = ( uint32_t ) sprintf( cBuffer, ggdDEMO_MQTT_MSG_DISCOVERY, ( long unsigned int ) ulMessageCounter ); /*lint !e586 sprintf can be used for specific demo. */
-        xPublishInfo.pPayload = ( const void * ) cBuffer;
+        xMQTTPublishInfo.pPayload = ( const void * ) cBuffer;
+        xMQTTPublishInfo.payloadLength = ( uint32_t ) sprintf( cBuffer, ggdDEMO_MQTT_MSG_DISCOVERY, ( long unsigned int ) ulMessageCounter );
 
-        /* Call the MQTT blocking PUBLISH function. */
-        xMqttStatus = IotMqtt_TimedPublish( mqttConnection,
-                                            &xPublishInfo,
-                                            0,
-                                            _maxCommandTimeMs );
 
-        if( xMqttStatus != IOT_MQTT_SUCCESS )
+        /* Get a unique packet id. */
+        usPublishPacketIdentifier = MQTT_GetPacketId( pxMQTTContext );
+
+        /* Send PUBLISH packet. Packet ID is not used for a QoS1 publish. */
+        xResult = MQTT_Publish( pxMQTTContext, &xMQTTPublishInfo, usPublishPacketIdentifier );
+
+        if( xResult != MQTTSuccess )
         {
-            IotLogError( "mqtt_client - Failure to publish. Error %s.",
-                         IotMqtt_strerror( xMqttStatus ) );
+            xStatus = pdFAIL;
+            LogError( ( "Failed to send PUBLISH message to broker: Topic=%s, Error=%s",
+                        pcTopic,
+                        MQTT_Status_strerror( xResult ) ) );
         }
-
-        IotClock_SleepMs( _timeBetweenPublishMs );
     }
+
+    return xStatus;
 }
 
 /*-----------------------------------------------------------*/
@@ -762,15 +740,11 @@ static BaseType_t prvConnectToServerWithBackoffRetries( NetworkContext_t * pxNet
 }
 /*-----------------------------------------------------------*/
 
-static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterface )
+static int _discoverGreengrassCore()
 {
     int status = EXIT_SUCCESS;
     MQTTStatus_t xResult;
     BaseType_t xDemoStatus = pdFAIL;
-    IotMqttError_t mqttStatus = IOT_MQTT_SUCCESS;
-    GGD_HostAddressData_t xHostAddressData = { 0 };
-    HostParameters_t xHostParameters;
-    IotMqttConnection_t mqttConnection = IOT_MQTT_CONNECTION_INITIALIZER;
     TransportInterface_t xTransportInterface = { 0 };
     NetworkContext_t xNetworkContext = { 0 };
     SecureSocketsTransportParams_t secureSocketsTransportParams = { 0 };
@@ -840,18 +814,12 @@ static int _discoverGreengrassCore( const IotNetworkInterface_t * pNetworkInterf
 
     if( xDemoStatus == pdPASS )
     {
-        LogInfo( ( "Greengrass device address is %s:%d.\n",
-                   xHostAddressData.pcHostAddress,
-                   xHostAddressData.usPort ) );
-
-        /* TODO: Replace with coreMQTT _sendMessageToGGC( mqttConnection ); */
+        _sendMessageToGGC( &xMQTTContext );
 
         IotLogInfo( "Disconnecting from broker." );
 
         xResult = MQTT_Disconnect( &xMQTTContext );
         SecureSocketsTransport_Disconnect( &xNetworkContext );
-
-        mqttConnection = IOT_MQTT_CONNECTION_INITIALIZER;
         IotLogInfo( "Disconnected from the broker." );
     }
     else
@@ -869,7 +837,7 @@ int vStartGreenGrassDiscoveryTask( bool awsIotMqttMode,
                                    const char * pIdentifier,
                                    void * pNetworkServerInfo,
                                    void * pNetworkCredentialInfo,
-                                   const IotNetworkInterface_t * pNetworkInterface )
+                                   void * pNetworkInterface )
 {
     /* Return value of this function and the exit status of this program. */
     int status = EXIT_SUCCESS;
@@ -879,8 +847,9 @@ int vStartGreenGrassDiscoveryTask( bool awsIotMqttMode,
     ( void ) pIdentifier;
     ( void ) pNetworkServerInfo;
     ( void ) pNetworkCredentialInfo;
+    ( void ) pNetworkInterface;
 
-    status = _discoverGreengrassCore( pNetworkInterface );
+    status = _discoverGreengrassCore();
 
     return status;
 }

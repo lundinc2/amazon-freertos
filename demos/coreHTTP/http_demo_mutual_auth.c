@@ -199,7 +199,9 @@ static uint8_t ucUserBuffer[ democonfigUSER_BUFFER_LENGTH ];
  *
  * @return pdPASS on successful connection, pdFAIL otherwise.
  */
-static BaseType_t prvConnectToServer( NetworkContext_t * pxNetworkContext );
+static BaseType_t prvConnectToServer( NetworkContext_t * pxNetworkContext,
+                                      SocketsConfig_t * pxSocketsConfig,
+                                      ServerInfo_t * pxServerInfo );
 
 /**
  * @brief Send an HTTP request based on a specified method and path, then
@@ -263,6 +265,25 @@ int RunCoreHttpMutualAuthDemo( bool awsIotMqttMode,
 
     xNetworkContext.pParams = &secureSocketsTransportParams;
 
+    /* Initializer server information. */
+    ServerInfo_t xServerInfo = { 0 };
+
+    xServerInfo.pHostName = democonfigAWS_IOT_ENDPOINT;
+    xServerInfo.hostNameLength = httpexampleAWS_IOT_ENDPOINT_LENGTH;
+    xServerInfo.port = democonfigAWS_HTTP_PORT;
+
+    /* Configure credentials for TLS mutual authenticated session. */
+    SocketsConfig_t xSocketsConfig = { 0 };
+
+    xSocketsConfig.enableTls = true;
+    xSocketsConfig.pAlpnProtos = NULL;
+    xSocketsConfig.maxFragmentLength = 0;
+    xSocketsConfig.disableSni = false;
+    xSocketsConfig.pRootCa = democonfigROOT_CA_PEM;
+    xSocketsConfig.rootCaSize = sizeof( democonfigROOT_CA_PEM );
+    xSocketsConfig.sendTimeoutMs = democonfigTRANSPORT_SEND_RECV_TIMEOUT_MS;
+    xSocketsConfig.recvTimeoutMs = democonfigTRANSPORT_SEND_RECV_TIMEOUT_MS;
+
     do
     {
         /**************************** Connect. ******************************/
@@ -274,7 +295,9 @@ int RunCoreHttpMutualAuthDemo( bool awsIotMqttMode,
          * cannot be established with the broker after the configured number of
          * attempts. */
         xDemoStatus = connectToServerWithBackoffRetries( prvConnectToServer,
-                                                         &xNetworkContext );
+                                                         &xNetworkContext,
+                                                         &xSocketsConfig,
+                                                         &xServerInfo );
 
         if( xDemoStatus == pdPASS )
         {
@@ -354,27 +377,12 @@ int RunCoreHttpMutualAuthDemo( bool awsIotMqttMode,
 
 /*-----------------------------------------------------------*/
 
-static BaseType_t prvConnectToServer( NetworkContext_t * pxNetworkContext )
+static BaseType_t prvConnectToServer( NetworkContext_t * pxNetworkContext,
+                                      SocketsConfig_t * pxSocketsConfig,
+                                      ServerInfo_t * pxServerInfo )
 {
-    ServerInfo_t xServerInfo = { 0 };
-    SocketsConfig_t xSocketsConfig = { 0 };
     BaseType_t xStatus = pdPASS;
     TransportSocketStatus_t xNetworkStatus = TRANSPORT_SOCKET_STATUS_SUCCESS;
-
-    /* Initializer server information. */
-    xServerInfo.pHostName = democonfigAWS_IOT_ENDPOINT;
-    xServerInfo.hostNameLength = httpexampleAWS_IOT_ENDPOINT_LENGTH;
-    xServerInfo.port = democonfigAWS_HTTP_PORT;
-
-    /* Configure credentials for TLS mutual authenticated session. */
-    xSocketsConfig.enableTls = true;
-    xSocketsConfig.pAlpnProtos = NULL;
-    xSocketsConfig.maxFragmentLength = 0;
-    xSocketsConfig.disableSni = false;
-    xSocketsConfig.pRootCa = democonfigROOT_CA_PEM;
-    xSocketsConfig.rootCaSize = sizeof( democonfigROOT_CA_PEM );
-    xSocketsConfig.sendTimeoutMs = democonfigTRANSPORT_SEND_RECV_TIMEOUT_MS;
-    xSocketsConfig.recvTimeoutMs = democonfigTRANSPORT_SEND_RECV_TIMEOUT_MS;
 
     /* Establish a TLS session with the HTTP server. This example connects to
      * the HTTP server as specified in democonfigAWS_IOT_ENDPOINT and
@@ -386,8 +394,8 @@ static BaseType_t prvConnectToServer( NetworkContext_t * pxNetworkContext )
 
     /* Attempt to create a mutually authenticated TLS connection. */
     xNetworkStatus = SecureSocketsTransport_Connect( pxNetworkContext,
-                                                     &xServerInfo,
-                                                     &xSocketsConfig );
+                                                     pxServerInfo,
+                                                     pxSocketsConfig );
 
     if( xNetworkStatus != TRANSPORT_SOCKET_STATUS_SUCCESS )
     {

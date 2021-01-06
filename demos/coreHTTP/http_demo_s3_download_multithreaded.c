@@ -954,6 +954,22 @@ int RunCoreHttpS3DownloadMultithreadedDemo( bool awsIotMqttMode,
 
     SecureSocketsTransportParams_t secureSocketsTransportParams = { 0 };
 
+    /* Initializer server information. */
+    ServerInfo_t xServerInfo = { 0 };
+
+
+    /* Configure credentials for TLS mutual authenticated session. */
+    SocketsConfig_t xSocketsConfig = { 0 };
+
+    xSocketsConfig.enableTls = true;
+    xSocketsConfig.pAlpnProtos = NULL;
+    xSocketsConfig.maxFragmentLength = 0;
+    xSocketsConfig.disableSni = false;
+    xSocketsConfig.pRootCa = democonfigROOT_CA_PEM;
+    xSocketsConfig.rootCaSize = sizeof( democonfigROOT_CA_PEM );
+    xSocketsConfig.sendTimeoutMs = democonfigTRANSPORT_SEND_RECV_TIMEOUT_MS;
+    xSocketsConfig.recvTimeoutMs = democonfigTRANSPORT_SEND_RECV_TIMEOUT_MS;
+
     /* Remove compiler warnings about unused parameters. */
     ( void ) awsIotMqttMode;
     ( void ) pIdentifier;
@@ -1022,7 +1038,9 @@ int RunCoreHttpS3DownloadMultithreadedDemo( bool awsIotMqttMode,
              * the TCP connection cannot be established with the server after
              * the configured number of attempts. */
             xDemoStatus = connectToServerWithBackoffRetries( prvConnectToServer,
-                                                             &xNetworkContext );
+                                                             &xNetworkContext,
+                                                             &xSocketsConfig,
+                                                             &xServerInfo );
 
             if( xDemoStatus == pdFAIL )
             {

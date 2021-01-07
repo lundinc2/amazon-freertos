@@ -694,11 +694,6 @@ int RunCoreHttpS3DownloadDemo( bool awsIotMqttMode,
     ( void ) pNetworkServerInfo;
     ( void ) pNetworkCredentialInfo;
     ( void ) pNetworkInterface;
-    ServerInfo_t xServerInfo = { 0 };
-
-
-    /* Configure credentials for TLS mutual authenticated session. */
-    SocketsConfig_t xSocketsConfig = { 0 };
 
     /* The length of the path within the pre-signed URL. This variable is
      * defined in order to store the length returned from parsing the URL, but
@@ -706,7 +701,6 @@ int RunCoreHttpS3DownloadDemo( bool awsIotMqttMode,
      * query information following the location of the object, to the end of the
      * S3 presigned URL. */
     size_t xPathLen = 0;
-
     xNetworkContext.pParams = &secureSocketsTransportParams;
     LogInfo( ( "HTTP Client Synchronous S3 download demo using pre-signed URL:\n%s",
                democonfigS3_PRESIGNED_GET_URL ) );
@@ -723,9 +717,7 @@ int RunCoreHttpS3DownloadDemo( bool awsIotMqttMode,
          * The function returns pdFAIL if a TCP connection with the server
          * cannot be established  after the configured number of attempts. */
         xDemoStatus = connectToServerWithBackoffRetries( prvConnectToServer,
-                                                         &xNetworkContext,
-                                                         &xSocketsConfig,
-                                                         &xServerInfo );
+                                                         &xNetworkContext );
 
         if( xDemoStatus == pdFAIL )
         {

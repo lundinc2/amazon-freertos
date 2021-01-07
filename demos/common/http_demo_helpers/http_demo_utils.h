@@ -60,9 +60,7 @@ typedef BaseType_t ( * TransportConnect_t )( NetworkContext_t * pxNetworkContext
  * @return pdFAIL on failure; pdPASS on successful connection.
  */
 BaseType_t connectToServerWithBackoffRetries( TransportConnect_t connectFunction,
-                                              NetworkContext_t * pxNetworkContext,
-                                              SocketsConfig_t * pxSocketsConfig,
-                                              ServerInfo_t * pxServerInfo );
+                                              NetworkContext_t * pxNetworkContext );
 
 /**
  * @brief Retrieve the path from the input URL.

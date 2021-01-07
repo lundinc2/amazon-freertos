@@ -129,9 +129,7 @@ static BaseType_t prvBackoffForRetry( BackoffAlgorithmContext_t * pxRetryParams 
 /*-----------------------------------------------------------*/
 
 BaseType_t connectToServerWithBackoffRetries( TransportConnect_t connectFunction,
-                                              NetworkContext_t * pxNetworkContext,
-                                              SocketsConfig_t * pxSocketsConfig,
-                                              ServerInfo_t * pxServerInfo )
+                                              NetworkContext_t * pxNetworkContext )
 {
     BaseType_t xReturn = pdFAIL;
     /* Struct containing the next backoff time. */
@@ -153,7 +151,7 @@ BaseType_t connectToServerWithBackoffRetries( TransportConnect_t connectFunction
      * exhausted.*/
     do
     {
-        xReturn = connectFunction( pxNetworkContext, pxSocketsConfig, pxServerInfo );
+        xReturn = connectFunction( pxNetworkContext );
 
         if( xReturn != pdPASS )
         {

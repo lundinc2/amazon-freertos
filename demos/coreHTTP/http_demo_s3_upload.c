@@ -700,11 +700,6 @@ int RunCoreHttpS3UploadDemo( bool awsIotMqttMode,
     HTTPStatus_t xHTTPStatus = HTTPSuccess;
     BaseType_t xDemoRunCount = 0UL;
     SecureSocketsTransportParams_t secureSocketsTransportParams = { 0 };
-    ServerInfo_t xServerInfo = { 0 };
-
-
-    /* Configure credentials for TLS mutual authenticated session. */
-    SocketsConfig_t xSocketsConfig = { 0 };
 
     /* Upon return, pdPASS will indicate a successful demo execution.
     * pdFAIL will indicate some failures occurred during execution. The
@@ -724,7 +719,6 @@ int RunCoreHttpS3UploadDemo( bool awsIotMqttMode,
      * query information following the location of the object, to the end of the
      * S3 presigned URL. */
     size_t xPathLen = 0;
-
     xNetworkContext.pParams = &secureSocketsTransportParams;
     LogInfo( ( "HTTP Client Synchronous S3 upload demo using pre-signed URL:\n%s",
                democonfigS3_PRESIGNED_PUT_URL ) );
@@ -741,9 +735,7 @@ int RunCoreHttpS3UploadDemo( bool awsIotMqttMode,
          * The function returns pdFAIL if a TCP connection with the server
          * cannot be established after the configured number of attempts. */
         xDemoStatus = connectToServerWithBackoffRetries( prvConnectToServer,
-                                                         &xNetworkContext,
-                                                         &xSocketsConfig,
-                                                         &xServerInfo );
+                                                         &xNetworkContext );
 
         if( xDemoStatus == pdFAIL )
         {

@@ -392,7 +392,6 @@ set_source_files_properties(
 )
 endif()
 set_source_files_properties(
-    ${AFR_MODULES_C_SDK_DIR}/aws/greengrass/aws_greengrass_discovery.c
     ${AFR_DEMOS_DIR}/tcp/aws_tcp_echo_client_single_task.c
     ${AFR_DEMOS_DIR}/secure_sockets/iot_test_tcp.c
     ${AFR_DEMOS_DIR}/wifi/iot_test_wifi.c

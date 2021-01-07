@@ -179,7 +179,7 @@ endif()
 
 target_sources(
     AFR::wifi::mcu_port
-    INTERFACE 
+    INTERFACE
         "${afr_ports_dir}/wifi/iot_wifi.c"
         "${afr_ports_dir}/wifi/iot_softap_wifi_provisioning.c"
         # Due to nghttp's dependency on it, http_parser is added to generate metadata
@@ -460,7 +460,6 @@ set_source_files_properties(
 )
 endif()
 set_source_files_properties(
-    ${AFR_MODULES_C_SDK_DIR}/aws/greengrass/aws_greengrass_discovery.c
     ${AFR_DEMOS_DIR}/tcp/aws_tcp_echo_client_single_task.c
     ${AFR_DEMOS_DIR}/secure_sockets/iot_test_tcp.c
     ${AFR_DEMOS_DIR}/wifi/iot_test_wifi.c

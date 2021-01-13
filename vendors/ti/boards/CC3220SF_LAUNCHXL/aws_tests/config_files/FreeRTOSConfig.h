@@ -69,6 +69,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define configUSE_TICK_HOOK                      0
 #define configTICK_RATE_HZ                       ( ( TickType_t ) 1000 )
 #define configMINIMAL_STACK_SIZE                 ( ( unsigned short ) 256 )
+#define    configPOSIX_STACK_SIZE configMINIMAL_STACK_SIZE * 6
 #define configTOTAL_HEAP_SIZE                    ( ( size_t ) ( 92160 ) )
 #define configMAX_TASK_NAME_LEN                  ( 12 )
 #define configUSE_TRACE_FACILITY                 1

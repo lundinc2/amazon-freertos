@@ -213,6 +213,13 @@ target_link_libraries(
         AFR::posix
 )
 
+target_compile_definitions(
+    AFR::posix::mcu_port
+    INTERFACE
+        _SYS_TYPES_H
+        _STDIO_H_
+)
+
 # Common I/O, currently only fully supported for GCC
 afr_mcu_port(common_io)
 target_sources(
@@ -244,6 +251,24 @@ target_sources(
     AFR::wifi::mcu_port
     INTERFACE
         # Add device network interface source
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/net/slnetconn.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/net/slnetif.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/net/slnetsock.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/net/slnetutils.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/drivers/net/wifi/slnetif/slwificonn.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/drivers/net/wifi/slnetif/slnetifwifi.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/clock.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/memory.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/mqueue.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/pthread.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/pthread_barrier.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/pthread_cond.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/pthread_mutex.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/pthread_rwlock.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/sched.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/sleep.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/semaphore.c"
+        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/timer.c"
         "${sysconfig_files_wifi}"
         "${simplelink_common_src_dir}/utils/network_if/${AFR_BOARD_NAME}/network_if.c"
         "${portable_dir}/wifi/iot_wifi.c"
@@ -253,17 +278,16 @@ target_sources(
 target_include_directories(
     AFR::wifi::mcu_port BEFORE
     INTERFACE
-      "${AFR_MODULES_ABSTRACTIONS_DIR}/posix/include"
-      "${AFR_MODULES_ABSTRACTIONS_DIR}/posix/include/FreeRTOS_POSIX"
-      "${AFR_MODULES_FREERTOS_PLUS_DIR}/standard/freertos_plus_posix/include"
+      "${portable_dir}/posix"
+      "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/net"
+      "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/drivers/net/wifi"
+      "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/gcc"
       "${simplelink_common_src_dir}/utils/network_if/${AFR_BOARD_NAME}"
-      "${compiler_specific_include}"
 )
 
 target_link_libraries(
     AFR::wifi::mcu_port
     INTERFACE
-        AFR::posix
         AFR::secure_sockets
 )
 

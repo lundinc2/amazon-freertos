@@ -84,9 +84,9 @@ unsigned long g_ulStaIp = 0;
 /* Network Gateway IP address                                                 */
 unsigned long g_ulGatewayIP = 0;
 /* Connection SSID                                                            */
-unsigned char g_ucConnectionSSID[SL_WLAN_SSID_MAX_LENGTH + 1];
+unsigned char g_ucConnectionSSID[SL_WLAN_SSID_MAX_LENGTH + 1] = {0};
 /* Connection BSSID                                                           */
-unsigned char g_ucConnectionBSSID[SL_WLAN_BSSID_LENGTH ];
+unsigned char g_ucConnectionBSSID[SL_WLAN_BSSID_LENGTH ] = {0};
 /* SimpleLink Status                                                          */
 volatile unsigned long g_ulStatus = 0;
 /* Connection time delay index                                                */
@@ -322,8 +322,8 @@ void InitializeAppVariables(void)
     g_ulStaIp = 0;
     g_ulGatewayIP = 0;
 
-    memset(g_ucConnectionSSID, 0, sizeof(g_ucConnectionSSID));
-    memset(g_ucConnectionBSSID, 0, sizeof(g_ucConnectionBSSID));
+    //memset(g_ucConnectionSSID, 0, sizeof(g_ucConnectionSSID));
+   // memset(g_ucConnectionBSSID, 0, sizeof(g_ucConnectionBSSID));
 }
 
 //*****************************************************************************

@@ -188,7 +188,6 @@ target_include_directories(
     INTERFACE
         "${simplelink_sdk_dir}/source"
         "${board_dir}/config_files"
-        #"${board_dir}/application_code/ti_code"
         # Need aws_clientcredential.h
         "$<IF:${AFR_IS_TESTING},${AFR_TESTS_DIR},${AFR_DEMOS_DIR}>/include"
         ${compiler_specific_include}
@@ -250,27 +249,29 @@ afr_mcu_port(wifi)
 target_sources(
     AFR::wifi::mcu_port
     INTERFACE
-        # Add device network interface source
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/net/slnetconn.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/net/slnetif.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/net/slnetsock.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/net/slnetutils.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/drivers/net/wifi/slnetif/slwificonn.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/drivers/net/wifi/slnetif/slnetifwifi.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/clock.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/memory.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/mqueue.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/pthread.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/pthread_barrier.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/pthread_cond.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/pthread_mutex.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/pthread_rwlock.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/sched.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/sleep.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/semaphore.c"
-        "/Applications/ti/simplelink_cc32xx_sdk_4_30_00_06/source/ti/posix/freertos/timer.c"
-        "${sysconfig_files_wifi}"
+        "${simplelink_sdk_dir}/source/ti/net/slnetconn.c"
+        "${simplelink_sdk_dir}/source/ti/net/slnetif.c"
+        "${simplelink_sdk_dir}/source/ti/net/slnetsock.c"
+        "${simplelink_sdk_dir}/source/ti/net/slnetutils.c"
+        "${simplelink_sdk_dir}/source/ti/drivers/net/wifi/slnetif/slwificonn.c"
+        "${simplelink_sdk_dir}/source/ti/drivers/net/wifi/slnetif/slnetifwifi.c"
         "${simplelink_common_src_dir}/utils/network_if/${AFR_BOARD_NAME}/network_if.c"
+        "${sysconfig_files_wifi}"
+
+        # Use TI POSIX instead of FreeRTOS_POSIX for compatibility with TI
+        # network stack.
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/clock.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/memory.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/mqueue.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_barrier.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_cond.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_mutex.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_rwlock.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/sched.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/sleep.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/semaphore.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/timer.c"
         "${portable_dir}/wifi/iot_wifi.c"
 )
 

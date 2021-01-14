@@ -213,7 +213,8 @@ static void prvIotPowerCallbackCancelIdle( bool bIdleState,
  */
 static void prvDisableInterrupts()
 {
-    #ifdef __ARM_ARCH /* Check for ARM target */
+    /* Check for ARM target */
+    #ifndef __TI_COMPILER_VERSION__ && # ifdef__ARM_ARCH /* TI compiler does not support in-line assembly.*/
         ultestIotPowerSavedInterruptConfig1 = *( volatile uint32_t * ) 0xE000E100;
         ultestIotPowerSavedInterruptConfig2 = *( volatile uint32_t * ) 0xE000E104;
 
@@ -235,7 +236,8 @@ static void prvDisableInterrupts()
  */
 static void prvEnableInterrupts()
 {
-    #ifdef __ARM_ARCH /* Check for ARM target */
+    /* Check for ARM target */
+    #ifndef __TI_COMPILER_VERSION__ && # ifdef__ARM_ARCH /* TI compiler does not support in-line assembly.*/
         /* Re-Enable the interrupts at nvic */
         *( volatile uint32_t * ) 0xE000E100 = ultestIotPowerSavedInterruptConfig1;
         *( volatile uint32_t * ) 0xE000E104 = ultestIotPowerSavedInterruptConfig2;
@@ -777,6 +779,7 @@ TEST( TEST_IOT_POWER, AFQP_IotPower_PCWakeThresholdTest )
     uint8_t ucGetWakeupSources[ testIotPOWER_MAX_WAKEUP_SOURCES ] = { 0 };
     uint32_t ulMilliSeconds;
     int32_t lRetVal;
+    int i;
 
     /* Open Power handle */
     xPowerHandle = iot_power_open();
@@ -831,7 +834,7 @@ TEST( TEST_IOT_POWER, AFQP_IotPower_PCWakeThresholdTest )
     {
         TEST_ASSERT_EQUAL( IOT_POWER_SUCCESS, lRetVal );
 
-        for( int i = 0; i < ustestIotPowerWakeupSourcesLength; i++ )
+        for( i = 0; i < ustestIotPowerWakeupSourcesLength; i++ )
         {
             if( ucGetWakeupSources[ i ] != puctestIotPowerWakeupSources[ i ] )
             {
@@ -910,6 +913,7 @@ TEST( TEST_IOT_POWER, AFQP_IotPower_ClkSrcOffWakeThresholdTest )
     uint8_t ucGetWakeupSources[ testIotPOWER_MAX_WAKEUP_SOURCES ] = { 0 };
     uint32_t ulMilliSeconds;
     int32_t lRetVal;
+    int i;
 
     /* Open Power handle */
     xPowerHandle = iot_power_open();
@@ -974,7 +978,7 @@ TEST( TEST_IOT_POWER, AFQP_IotPower_ClkSrcOffWakeThresholdTest )
     {
         TEST_ASSERT_EQUAL( IOT_POWER_SUCCESS, lRetVal );
 
-        for( int i = 0; i < ustestIotPowerWakeupSourcesLength; i++ )
+        for( i = 0; i < ustestIotPowerWakeupSourcesLength; i++ )
         {
             if( ucGetWakeupSources[ i ] != puctestIotPowerWakeupSources[ i ] )
             {

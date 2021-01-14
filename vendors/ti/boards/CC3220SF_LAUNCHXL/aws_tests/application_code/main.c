@@ -87,8 +87,6 @@ int main( void )
     GPIO_init();
     SPI_init();
 
-    UART_PRINT( "Hello" );
-
     /* Start logging task. */
     xLoggingTaskInitialize( mainLOGGING_TASK_STACK_SIZE,
                             tskIDLE_PRIORITY,

@@ -356,13 +356,13 @@
 					<state>$TOOLKIT_DIR$\inc</state>
 					<state>$TOOLKIT_DIR$\inc\c</state>
 					<state>$PROJ_DIR$\..\..\..\..\..\freertos_kernel\include</state>
-					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\source</state>
-					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files</state>
-					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\application_code\ti_code</state>
+					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\source</state>
+					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files</state>
+					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\application_code\ti_code</state>
 					<state>$PROJ_DIR$\..\..\..\..\..\tests\include</state>
 					<state>$PROJ_DIR$\..\..\..\..\..\freertos_kernel\portable\IAR\ARM_CM3</state>
 					<state>$PROJ_DIR$\..\..\..\..\..\libraries\abstractions\posix\include</state>
-					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\ports\posix</state>
+					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\ports\posix</state>
 					<state>$PROJ_DIR$\..\..\..\..\..\libraries\freertos_plus\standard\freertos_plus_posix\include</state>
 					<state>$PROJ_DIR$\..\..\..\..\..\libraries\c_sdk\standard\common\include\private</state>
 					<state>$PROJ_DIR$\..\..\..\..\..\libraries\abstractions\posix\include\FreeRTOS_POSIX</state>
@@ -688,7 +688,7 @@
 				</option>
 				<option>
 					<name>AUserIncludes</name>
-					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files</state>
+					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files</state>
 				</option>
 				<option>
 					<name>AExtraOptionsCheckV2</name>
@@ -841,7 +841,7 @@
 				</option>
 				<option>
 					<name>IlinkIcfFile</name>
-					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\source\ti\boards\CC3220SF_LAUNCHXL\CC3220SF_LAUNCHXL_FREERTOS.icf</state>
+					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\boards\CC3220SF_LAUNCHXL\CC3220SF_LAUNCHXL_FREERTOS.icf</state>
 				</option>
 				<option>
 					<name>IlinkIcfFileSlave</name>
@@ -877,9 +877,9 @@
 				</option>
 				<option>
 					<name>IlinkExtraOptions</name>
-					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\source\ti\drivers\net\wifi\iar\rtos\simplelink.a</state>
-					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\source\ti\devices\cc32xx\driverlib\iar\Release\driverlib.a</state>
-					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\source\ti\drivers\lib\drivers_cc32xx.arm4</state>
+					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\net\wifi\iar\rtos\simplelink.a</state>
+					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\devices\cc32xx\driverlib\iar\Release\driverlib.a</state>
+					<state>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\source\ti\drivers\lib\drivers_cc32xx.arm4</state>
 				</option>
 				<option>
 					<name>IlinkLowLevelInterfaceSlave</name>
@@ -1220,44 +1220,40 @@
 			<group>
 				<name>boards</name>
 				<group>
-					<name>CC3220SF_LAUNCHXL</name>
+					<name>cc3220_launchpad</name>
 					<file>
-						<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\CC3220SF.ccxml</name>
+						<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\CC3220SF.ccxml</name>
 					</file>
 					<group>
 						<name>ports</name>
 						<group>
 							<name>posix</name>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\ports\posix\FreeRTOS_POSIX_portable.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\ports\posix\FreeRTOS_POSIX_portable.h</name>
 							</file>
 						</group>
 						<group>
 							<name>secure_sockets</name>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\ports\secure_sockets\iot_secure_sockets.c</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\ports\secure_sockets\iot_secure_sockets.c</name>
 							</file>
 						</group>
 						<group>
 							<name>pkcs11</name>
 							<file>
-<<<<<<< HEAD:projects/ti/cc3220_launchpad/iar/aws_tests/aws_tests.ewp
 								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\ports\pkcs11\core_pkcs11_pal.c</name>
-=======
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\ports\pkcs11\iot_pkcs11_pal.c</name>
->>>>>>> de853f84b (Copy TI branch over to clean main branch fork):projects/ti/CC3220SF_LAUNCHXL/iar/aws_tests/aws_tests.ewp
 							</file>
 						</group>
 						<group>
 							<name>wifi</name>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\ports\wifi\iot_wifi.c</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\ports\wifi\iot_wifi.c</name>
 							</file>
 						</group>
 						<group>
 							<name>ota</name>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\ports\ota\aws_ota_pal.c</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\ports\ota\aws_ota_pal.c</name>
 							</file>
 						</group>
 					</group>
@@ -1268,87 +1264,79 @@
 							<group>
 								<name>ti_code</name>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\application_code\ti_code\CC3220SF_LAUNCHXL.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\application_code\ti_code\CC3220SF_LAUNCHXL.c</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\application_code\ti_code\network_if.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\application_code\ti_code\network_if.c</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\application_code\ti_code\uart_term.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\application_code\ti_code\uart_term.c</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\application_code\ti_code\Board.h</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\application_code\ti_code\Board.h</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\application_code\ti_code\CC3220SF_LAUNCHXL.h</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\application_code\ti_code\CC3220SF_LAUNCHXL.h</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\application_code\ti_code\network_if.h</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\application_code\ti_code\network_if.h</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\application_code\ti_code\uart_term.h</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\application_code\ti_code\uart_term.h</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\application_code\ti_code\CC3220SF_LAUNCHXL_FREERTOS.cmd</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\application_code\ti_code\CC3220SF_LAUNCHXL_FREERTOS.cmd</name>
 								</file>
 							</group>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\application_code\main.c</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\application_code\main.c</name>
 							</file>
 						</group>
 						<group>
 							<name>config_files</name>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\FreeRTOSConfig.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\FreeRTOSConfig.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\FreeRTOSIPConfig.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\FreeRTOSIPConfig.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_bufferpool_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_bufferpool_config.h</name>
 							</file>
 							<file>
-<<<<<<< HEAD:projects/ti/cc3220_launchpad/iar/aws_tests/aws_tests.ewp
 								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_ggd_config.h</name>
-=======
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_demo_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_ggd_config.h</name>
->>>>>>> de853f84b (Copy TI branch over to clean main branch fork):projects/ti/CC3220SF_LAUNCHXL/iar/aws_tests/aws_tests.ewp
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_iot_network_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_iot_network_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_mqtt_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_mqtt_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_ota_agent_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_ota_agent_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_secure_sockets_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_secure_sockets_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_shadow_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_shadow_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_test_ota_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_test_ota_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_test_runner_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_test_runner_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_test_tcp_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_test_tcp_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_test_wifi_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_test_wifi_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\aws_wifi_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\aws_wifi_config.h</name>
-							</file>
-							<file>
-<<<<<<< HEAD:projects/ti/cc3220_launchpad/iar/aws_tests/aws_tests.ewp
 								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\core_http_config.h</name>
 							</file>
 							<file>
@@ -1371,30 +1359,18 @@
 							</file>
 							<file>
 								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\shadow_config.h</name>
-=======
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\iot_config.h</name>
 							</file>
 							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\iot_mqtt_agent_config.h</name>
-							</file>
-							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\iot_pkcs11_config.h</name>
-							</file>
-							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\iot_test_pkcs11_config.h</name>
->>>>>>> de853f84b (Copy TI branch over to clean main branch fork):projects/ti/CC3220SF_LAUNCHXL/iar/aws_tests/aws_tests.ewp
-							</file>
-							<file>
-								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\CC3220SF_LAUNCHXL\aws_tests\config_files\unity_config.h</name>
+								<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\boards\cc3220_launchpad\aws_tests\config_files\unity_config.h</name>
 							</file>
 						</group>
 					</group>
 				</group>
 			</group>
 			<group>
-				<name>simplelink_cc32xx_sdk</name>
+				<name>SimpleLink_CC32xx</name>
 				<group>
-					<name>2_10_00_04</name>
+					<name>v2_10_00_04</name>
 					<group>
 						<name>kernel</name>
 						<group>
@@ -1402,31 +1378,31 @@
 							<group>
 								<name>dpl</name>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\kernel\freertos\dpl\ClockP_freertos.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\ClockP_freertos.c</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\kernel\freertos\dpl\DebugP_freertos.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\DebugP_freertos.c</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\kernel\freertos\dpl\HwiPCC32XX_freertos.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\HwiPCC32XX_freertos.c</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\kernel\freertos\dpl\MutexP_freertos.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\MutexP_freertos.c</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\kernel\freertos\dpl\PowerCC32XX_freertos.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\PowerCC32XX_freertos.c</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\kernel\freertos\dpl\SemaphoreP_freertos.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\SemaphoreP_freertos.c</name>
 								</file>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\kernel\freertos\dpl\SystemP_freertos.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\dpl\SystemP_freertos.c</name>
 								</file>
 							</group>
 							<group>
 								<name>startup</name>
 								<file>
-									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\simplelink_cc32xx_sdk\2_10_00_04\kernel\freertos\startup\startup_cc32xx_iar.c</name>
+									<name>$PROJ_DIR$\..\..\..\..\..\vendors\ti\SimpleLink_CC32xx\v2_10_00_04\kernel\freertos\startup\startup_cc32xx_iar.c</name>
 								</file>
 							</group>
 						</group>

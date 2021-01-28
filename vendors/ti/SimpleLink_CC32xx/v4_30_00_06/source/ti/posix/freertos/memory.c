@@ -59,7 +59,14 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
+
+#if defined(__TI_COMPILER_VERSION__) || defined(__clang__)
+#include "../ccs/errno.h"
+#elif defined(__IAR_SYSTEMS_ICC__)
+#include "../iar/errno.h"
+#else
+#include "../gcc/errno.h"
+#endif
 
 #include <FreeRTOS.h>
 #include <portmacro.h>

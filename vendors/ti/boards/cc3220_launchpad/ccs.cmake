@@ -3,10 +3,10 @@
 # -------------------------------------------------------------------------------------------------
 
 set(compiler_defined_symbols
-    CC3220SF
+    DeviceFamily_CC3220
 )
 
-set(assembler_defined_symbols ${compiler_defined_symbols})
+#set(assembler_defined_symbols ${compiler_defined_symbols})
 
 set(compiler_flags
     -mv7M4 --code_state=16 --float_support=vfplib -me --diag_warning=225
@@ -14,16 +14,24 @@ set(compiler_flags
 
 set(assembler_flags ${compiler_flags})
 
+# The start-group flag is needed because some of the link_dependent_libs depend
+# on the CMake built kernel, so the link order can't be configured.
 set(linker_flags
     --heap_size=0x0 --stack_size=0x518
     --warn_sections --rom_model --reread_libs
     --diag_suppress=10063
 )
 
+set( compiler_posix_includes
+    "${simplelink_sdk_dir}/source/ti/posix/ccs"
+)
 set(link_dependent_libs
+    "${simplelink_sdk_dir}/source/third_party/spiffs/lib/ccs/m4/spiffs.a"
     "${simplelink_sdk_dir}/source/ti/devices/cc32xx/driverlib/ccs/Release/driverlib.a"
-    "${simplelink_sdk_dir}/source/ti/drivers/lib/drivers_cc32xx.aem4"
     "${simplelink_sdk_dir}/source/ti/drivers/net/wifi/ccs/rtos/simplelink.a"
+    "${simplelink_sdk_dir}/source/ti/net/lib/ccs/m4/slnetsock_release.a"
+    "${simplelink_sdk_dir}/source/ti/drivers/lib/drivers_cc32xx.aem4"
+    
 )
 
 # Force the use of response file to avoid "command line too long" error.

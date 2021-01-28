@@ -55,6 +55,8 @@ endif()
 if(${AFR_TOOLCHAIN} STREQUAL "arm-gcc")
     include("${CMAKE_CURRENT_LIST_DIR}/gcc.cmake")
     set(compiler_str "gcc")
+elseif(${AFR_TOOLCHAIN} STREQUAL "arm-ti")
+    include("${CMAKE_CURRENT_LIST_DIR}/ccs.cmake")
 elseif(NOT AFR_METADATA_MODE)
     message( FATAL_ERROR "The toolchain is not supported." )
 endif()
@@ -187,6 +189,7 @@ target_sources(
 target_include_directories(
     AFR::common_io::mcu_port
     INTERFACE
+      ${compiler_posix_includes}
       ${compiler_specific_include}
       "${sysconfig_out}"
       "$<IF:${AFR_IS_TESTING},${AFR_MODULES_ABSTRACTIONS_DIR}/common_io/test,>"

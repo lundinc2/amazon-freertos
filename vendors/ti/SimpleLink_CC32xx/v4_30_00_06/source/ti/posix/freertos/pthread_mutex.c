@@ -54,7 +54,14 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <time.h>
-#include <errno.h>
+
+#if defined(__TI_COMPILER_VERSION__) || defined(__clang__)
+#include "../ccs/errno.h"
+#elif defined(__IAR_SYSTEMS_ICC__)
+#include "../iar/errno.h"
+#else
+#include "../gcc/errno.h"
+#endif
 
 /*
  *  ======== pthread_mutex_obj ========

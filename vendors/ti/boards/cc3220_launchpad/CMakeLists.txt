@@ -65,13 +65,13 @@ endif()
 # To regenerate them, the bash/bat script provided with Sysconfig can be executed like so
 # ${sysconfig_sh} --compiler ${compiler_str} --product ${simplelink_sdk_dir}/.metadata/product.json --output ${sysconfig_out}
 # in order to generate new driver files from the modified Sysconfig.
-set(sysconfig_out "${board_dir}/application_code/ti_code")
+set(sysconfig_out "${board_dir}/application_code/ti_code/ccs")
 set(sysconfig_files_wifi
-    "${board_dir}/application_code/ti_code/ti_drivers_net_wifi_config.c"
-    "${board_dir}/application_code/ti_code/ti_net_config.c"
+    "${sysconfig_out}/ti_drivers_net_wifi_config.c"
+    "${sysconfig_out}/ti_net_config.c"
 )
 set(sysconfig_files_drivers
-    "${board_dir}/application_code/ti_code/ti_drivers_config.c"
+    "${sysconfig_out}/ti_drivers_config.c"
 )
 set(sysconfig_files_all
     "${sysconfig_files_wifi}"
@@ -149,7 +149,6 @@ target_sources(
         "${simplelink_sdk_dir}/kernel/freertos/dpl/PowerCC32XX_freertos.c"
         "${simplelink_sdk_dir}/kernel/freertos/dpl/QueueP_freertos.c"
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SemaphoreP_freertos.c"
-        "${simplelink_sdk_dir}/kernel/freertos/dpl/StaticAllocs_freertos.c"
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SwiP_freertos.c"
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SystemP_freertos.c"
         "${AFR_KERNEL_DIR}/portable/MemMang/heap_4.c"

@@ -56,6 +56,6 @@ set(compiler_specific_include
 # FreeRTOS demos and tests
 # -------------------------------------------------------------------------------------------------
 
-set(additional_linker_file_and_flags
+set(link_extra_flags
     "-T${board_dir}/application_code/ti_code/cc32xxsf_freertos.lds"
 )

@@ -3,10 +3,10 @@
 # -------------------------------------------------------------------------------------------------
 
 set(compiler_defined_symbols
-    DeviceFamily_CC3220
+    CC3220sf
 )
 
-#set(assembler_defined_symbols ${compiler_defined_symbols})
+set(assembler_defined_symbols ${compiler_defined_symbols})
 
 set(compiler_flags
     -mv7M4 --code_state=16 --float_support=vfplib -me --diag_warning=225
@@ -26,12 +26,10 @@ set( compiler_posix_includes
     "${simplelink_sdk_dir}/source/ti/posix/ccs"
 )
 set(link_dependent_libs
-    "${simplelink_sdk_dir}/source/third_party/spiffs/lib/ccs/m4/spiffs.a"
     "${simplelink_sdk_dir}/source/ti/devices/cc32xx/driverlib/ccs/Release/driverlib.a"
     "${simplelink_sdk_dir}/source/ti/drivers/net/wifi/ccs/rtos/simplelink.a"
-    "${simplelink_sdk_dir}/source/ti/net/lib/ccs/m4/slnetsock_release.a"
     "${simplelink_sdk_dir}/source/ti/drivers/lib/drivers_cc32xx.aem4"
-    
+
 )
 
 # Force the use of response file to avoid "command line too long" error.
@@ -68,7 +66,7 @@ set(compiler_specific_include
 # FreeRTOS demos and tests
 # -------------------------------------------------------------------------------------------------
 
-set(link_extra_flags 
+set(link_extra_flags
     --xml_link_info="${exe_target}_linkInfo.xml"
-    "${board_dir}/application_code/ti_code/cc32xxsf_freertos.cmd"
+    "${board_dir}/application_code/ti_code/CC3220SF_LAUNCHXL_FREERTOS.cmd"
 )

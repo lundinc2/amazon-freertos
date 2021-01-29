@@ -279,10 +279,10 @@ int RunHttpsSyncDownloadDemo( bool awsIotMqttMode,
     connConfig.caCertLen = 0;
     connConfig.userBuffer.pBuffer = _pConnUserBuffer;
     connConfig.userBuffer.bufferLen = sizeof( _pConnUserBuffer );
-    connConfig.pClientCert = ( ( IotNetworkCredentials_t * ) pNetworkCredentialInfo )->pClientCert;
-    connConfig.clientCertLen = ( ( IotNetworkCredentials_t * ) pNetworkCredentialInfo )->clientCertSize;
-    connConfig.pPrivateKey = ( ( IotNetworkCredentials_t * ) pNetworkCredentialInfo )->pPrivateKey;
-    connConfig.privateKeyLen = ( ( IotNetworkCredentials_t * ) pNetworkCredentialInfo )->privateKeySize;
+    connConfig.pClientCert = NULL;
+    connConfig.clientCertLen =0;
+    connConfig.pPrivateKey = NULL;
+    connConfig.privateKeyLen = 0;
     connConfig.pNetworkInterface = pNetworkInterface;
 
     /* Set the configurations needed for a synchronous request. */

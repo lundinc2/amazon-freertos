@@ -854,6 +854,15 @@ BaseType_t TLS_Connect( void * pvContext )
 
         /* Configure the SSL context for the device credentials. */
         xResult = prvInitializeClientCredential( pxCtx );
+
+        if( xResult != 0 )
+        {
+            TLS_PRINT( ( "Could not initialize client credentials.\r\n"
+                         "This will cause client verification to fail when "
+                         "connecting to servers that require mutual authentication.\r\n" ) );
+
+            xResult = 0;
+        }
     }
 
     if( ( 0 == xResult ) && ( NULL != pxCtx->ppcAlpnProtocols ) )
@@ -866,7 +875,6 @@ BaseType_t TLS_Connect( void * pvContext )
     }
 
     #ifdef MBEDTLS_DEBUG_C
-
         /* If mbedTLS is being compiled with debug support, assume that the
          * runtime configuration should use verbose output. */
         mbedtls_ssl_conf_dbg( &pxCtx->xMbedSslConfig, prvTlsDebugPrint, NULL );

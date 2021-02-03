@@ -213,7 +213,6 @@ target_sources(
         "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_cond.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_mutex.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_rwlock.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/memory.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/sched.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/sleep.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/semaphore.c"
@@ -287,6 +286,7 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
         ${config_files}
         "${simplelink_common_src_dir}/utils/uart_term/uart_term.c"
         "${board_dir}/application_code/main.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/memory.c"
     )
     target_include_directories(
         ${exe_target}
@@ -296,16 +296,10 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
     target_link_libraries(
         ${exe_target}
         PRIVATE
-            AFR::common_io
             AFR::wifi
+            AFR::common_io
             AFR::utils
             ${link_extra_flags}
-            -T"${board_dir}/application_code/ti_code/cc32xxsf_freertos.lds"
-    )
-    target_link_libraries(
-        ${exe_target}
-        PRIVATE
-            -l"libc.a"
     )
     add_custom_command(
         TARGET ${exe_target} POST_BUILD

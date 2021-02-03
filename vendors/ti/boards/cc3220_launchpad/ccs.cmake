@@ -29,7 +29,7 @@ set(link_dependent_libs
     "${simplelink_sdk_dir}/source/ti/devices/cc32xx/driverlib/ccs/Release/driverlib.a"
     "${simplelink_sdk_dir}/source/ti/drivers/net/wifi/ccs/rtos/simplelink.a"
     "${simplelink_sdk_dir}/source/ti/drivers/lib/drivers_cc32xx.aem4"
-
+    "-llibc.a"
 )
 
 # Force the use of response file to avoid "command line too long" error.

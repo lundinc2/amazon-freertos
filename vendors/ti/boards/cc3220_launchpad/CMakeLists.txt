@@ -54,7 +54,6 @@ endif()
 # Include IDE specific cmake file.
 if(${AFR_TOOLCHAIN} STREQUAL "arm-gcc")
     include("${CMAKE_CURRENT_LIST_DIR}/gcc.cmake")
-    set(compiler_str "gcc")
 elseif(${AFR_TOOLCHAIN} STREQUAL "arm-ti")
     include("${CMAKE_CURRENT_LIST_DIR}/ccs.cmake")
 elseif(NOT AFR_METADATA_MODE)
@@ -151,6 +150,10 @@ target_sources(
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SemaphoreP_freertos.c"
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SwiP_freertos.c"
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SystemP_freertos.c"
+        # Memory.c contains a malloc to be used for FreeRTOS port.
+        # This resolves issue of functions using "malloc" calling into the
+        # stdlib malloc, when we actually want to use pvPortMalloc
+        #"${simplelink_sdk_dir}/source/ti/posix/freertos/memory.c"
         "${AFR_KERNEL_DIR}/portable/MemMang/heap_4.c"
         ${compiler_specific_src}
 )
@@ -165,8 +168,6 @@ target_include_directories(
         "$<IF:${AFR_IS_TESTING},${AFR_TESTS_DIR},${AFR_DEMOS_DIR}>/include"
         ${compiler_specific_include}
 )
-
-add_dependencies( AFR::kernel::mcu_port gen_sysconfig_files )
 
 # Common I/O, currently only fully supported for GCC
 afr_mcu_port(common_io)
@@ -194,8 +195,6 @@ target_include_directories(
       "$<IF:${AFR_IS_TESTING},${AFR_MODULES_ABSTRACTIONS_DIR}/common_io/test,>"
 )
 
-add_dependencies( AFR::common_io::mcu_port gen_sysconfig_files )
-
 # WiFi
 afr_mcu_port(wifi)
 target_sources(
@@ -208,13 +207,13 @@ target_sources(
         # Use TI POSIX instead of FreeRTOS_POSIX for compatibility with TI
         # network stack.
         "${simplelink_sdk_dir}/source/ti/posix/freertos/clock.c"
-        "${simplelink_sdk_dir}/source/ti/posix/freertos/memory.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/mqueue.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_barrier.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_cond.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_mutex.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/pthread_rwlock.c"
+        "${simplelink_sdk_dir}/source/ti/posix/freertos/memory.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/sched.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/sleep.c"
         "${simplelink_sdk_dir}/source/ti/posix/freertos/semaphore.c"
@@ -236,8 +235,6 @@ target_link_libraries(
     INTERFACE
         AFR::secure_sockets
 )
-
-add_dependencies( AFR::wifi::mcu_port gen_sysconfig_files )
 
 # PKCS11
 afr_mcu_port(pkcs11_implementation)
@@ -304,6 +301,11 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
             AFR::utils
             ${link_extra_flags}
             -T"${board_dir}/application_code/ti_code/cc32xxsf_freertos.lds"
+    )
+    target_link_libraries(
+        ${exe_target}
+        PRIVATE
+            -l"libc.a"
     )
     add_custom_command(
         TARGET ${exe_target} POST_BUILD

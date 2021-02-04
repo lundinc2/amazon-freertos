@@ -54,8 +54,15 @@ endif()
 # Include IDE specific cmake file.
 if(${AFR_TOOLCHAIN} STREQUAL "arm-gcc")
     include("${CMAKE_CURRENT_LIST_DIR}/gcc.cmake")
+    set(toolchain "gcc")
 elseif(${AFR_TOOLCHAIN} STREQUAL "arm-ti")
     include("${CMAKE_CURRENT_LIST_DIR}/ccs.cmake")
+    set(toolchain "ccs")
+elseif(${AFR_TOOLCHAIN} STREQUAL "arm-iar")
+    include("${CMAKE_CURRENT_LIST_DIR}/iar.cmake")
+    if(NOT AFR_METADATA_MODE)
+        message(FATAL_ERROR "CMake support for TI using IAR is not complete yet.")
+endif()
 elseif(NOT AFR_METADATA_MODE)
     message( FATAL_ERROR "The toolchain is not supported." )
 endif()
@@ -64,7 +71,7 @@ endif()
 # To regenerate them, the bash/bat script provided with Sysconfig can be executed like so
 # ${sysconfig_sh} --compiler ${compiler_str} --product ${simplelink_sdk_dir}/.metadata/product.json --output ${sysconfig_out}
 # in order to generate new driver files from the modified Sysconfig.
-set(sysconfig_out "${board_dir}/application_code/ti_code/ccs")
+set(sysconfig_out "${board_dir}/application_code/ti_code/${toolchain}")
 set(sysconfig_files_wifi
     "${sysconfig_out}/ti_drivers_net_wifi_config.c"
     "${sysconfig_out}/ti_net_config.c"
@@ -150,10 +157,6 @@ target_sources(
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SemaphoreP_freertos.c"
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SwiP_freertos.c"
         "${simplelink_sdk_dir}/kernel/freertos/dpl/SystemP_freertos.c"
-        # Memory.c contains a malloc to be used for FreeRTOS port.
-        # This resolves issue of functions using "malloc" calling into the
-        # stdlib malloc, when we actually want to use pvPortMalloc
-        #"${simplelink_sdk_dir}/source/ti/posix/freertos/memory.c"
         "${AFR_KERNEL_DIR}/portable/MemMang/heap_4.c"
         ${compiler_specific_src}
 )
@@ -286,6 +289,10 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
         ${config_files}
         "${simplelink_common_src_dir}/utils/uart_term/uart_term.c"
         "${board_dir}/application_code/main.c"
+        # Memory.c contains a malloc to be used for FreeRTOS port.
+        # This resolves issue of functions using "malloc" calling into the
+        # stdlib malloc, when we actually want to use pvPortMalloc.
+        # It must be in this artifact to avoid confusing the linker.
         "${simplelink_sdk_dir}/source/ti/posix/freertos/memory.c"
     )
     target_include_directories(

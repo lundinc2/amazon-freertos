@@ -78,7 +78,7 @@
 /*
  * @brief Set to 1 if generating a device private-public key pair via C_GenerateKeyPair. 0 if not.
  */
-#define pkcs11testGENERATE_KEYPAIR_SUPPORT            ( 1 )
+#define pkcs11testGENERATE_KEYPAIR_SUPPORT            ( 0 )
 
 /*
  * @brief Set to 1 if generating a device private-public key pair via C_GenerateKeyPair. 0 if not.

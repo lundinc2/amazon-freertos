@@ -53,6 +53,10 @@
 #include <time.h>
 #include <errno.h>
 
+#if defined( __IAR_SYSTEMS_ICC__ )
+    #include "../iar/errno.h"
+#endif
+
 /*  Gate protection is not needed in boot thread (i.e. from main()).
  *  Check the scheduler state and only use the gate when scheduler
  *  is running. These macros improves the code presentation.

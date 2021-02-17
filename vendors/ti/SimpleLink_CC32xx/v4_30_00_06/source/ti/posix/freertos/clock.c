@@ -40,6 +40,7 @@
 #if defined(__TI_COMPILER_VERSION__) || defined(__clang__)
 #include "../ccs/time.h"
 #elif defined(__IAR_SYSTEMS_ICC__)
+#include "../iar/errno.h"
 #include "../iar/time.h"
 #else
 #include "../gcc/time.h"

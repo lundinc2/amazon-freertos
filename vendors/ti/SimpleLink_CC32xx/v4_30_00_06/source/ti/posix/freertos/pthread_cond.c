@@ -45,6 +45,10 @@
 #include <time.h>
 #include <errno.h>
 
+#if defined( __IAR_SYSTEMS_ICC__ )
+    #include "../iar/errno.h"
+#endif
+
 /*
  *  ======== ListElem ========
  */

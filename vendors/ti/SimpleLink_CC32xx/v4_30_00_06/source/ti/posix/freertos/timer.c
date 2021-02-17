@@ -51,6 +51,10 @@
 #include <time.h>
 #include <sys/types.h>
 
+#if defined( __IAR_SYSTEMS_ICC__ )
+    #include "../iar/errno.h"
+#endif
+
 /*
  *  ======== TimerObj ========
  */

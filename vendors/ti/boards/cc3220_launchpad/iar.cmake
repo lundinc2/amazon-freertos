@@ -33,13 +33,17 @@ set(compiler_flags
     ${extra_flags}
 )
 
+set( compiler_posix_includes
+    "${simplelink_sdk_dir}/source/ti/posix/iar"
+    )
+
 # "-M<>" is the default option to specify the left and right quotes of macro argument
 # -r is automatically added to generate debug information
 # Ref: http://netstorage.iar.com/SuppDB/Public/UPDINFO/012120/arm/doc/EWARM_AssemblerReference.ENU.pdf
 set(assembler_flags "-s+" -M{} "-w-" "-j" "--cpu" "Cortex-M4" "--fpu" "None")
 
 set(linker_flags
-    --config "${simplelink_sdk_dir}/source/ti/boards/CC3220SF_LAUNCHXL/CC3220SF_LAUNCHXL_FREERTOS.icf"
+    --config "${simplelink_sdk_dir}/source/ti/boards/cc3220_launchpad/CC3220SF_LAUNCHXL_FREERTOS.icf"
     --semihosting --entry __iar_program_start --vfe --text_out locale
 )
 

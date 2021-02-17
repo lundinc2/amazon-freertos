@@ -64,9 +64,8 @@
 									<listOptionValue builtIn="false" value="${ProjDirPath}/../../../../../libraries/abstractions/pkcs11/corePKCS11/source/include"/>
 									<listOptionValue builtIn="false" value="${ProjDirPath}/../../../../../libraries/freertos_plus/standard/crypto/include"/>
 									<listOptionValue builtIn="false" value="${ProjDirPath}/../../../../../libraries/freertos_plus/standard/utils/include"/>
-									<listOptionValue builtIn="false" value="${ProjDirPath}/../../../../../libraries/abstractions/common_io/include"/>
-									<listOptionValue builtIn="false" value="${ProjDirPath}/../../../../../vendors/ti/SimpleLink_CC32xx/v4_30_00_06/source/ti/posix/ccs"/>
 									<listOptionValue builtIn="false" value="${ProjDirPath}/../../../../../libraries/abstractions/wifi/include"/>
+									<listOptionValue builtIn="false" value="${ProjDirPath}/../../../../../vendors/ti/SimpleLink_CC32xx/v4_30_00_06/source/ti/posix/ccs"/>
 									<listOptionValue builtIn="false" value="${ProjDirPath}/../../../../../vendors/ti/SimpleLink_CC32xx/v4_30_00_06/source/ti/net"/>
 									<listOptionValue builtIn="false" value="${ProjDirPath}/../../../../../vendors/ti/SimpleLink_CC32xx/v4_30_00_06/source/ti/drivers/net/wifi"/>
 									<listOptionValue builtIn="false" value="${ProjDirPath}/../../../../../vendors/ti/simplelink_common/utils/network_if/cc3220_launchpad"/>

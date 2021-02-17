@@ -41,6 +41,10 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
+#if defined( __IAR_SYSTEMS_ICC__ )
+    #include "../iar/errno.h"
+#endif
+
 /* number of microseconds per tick */
 #define TICK_PERIOD_USECS (1000000L / configTICK_RATE_HZ)
 

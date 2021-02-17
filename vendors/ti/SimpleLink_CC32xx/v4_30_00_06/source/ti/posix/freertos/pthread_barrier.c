@@ -46,6 +46,10 @@
 #include <pthread.h>
 #include <errno.h>
 
+#if defined( __IAR_SYSTEMS_ICC__ )
+    #include "../iar/errno.h"
+#endif
+
 struct WaitElem
 {
     TaskHandle_t task;

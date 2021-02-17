@@ -60,6 +60,7 @@ elseif(${AFR_TOOLCHAIN} STREQUAL "arm-ti")
     set(toolchain "ccs")
 elseif(${AFR_TOOLCHAIN} STREQUAL "arm-iar")
     include("${CMAKE_CURRENT_LIST_DIR}/iar.cmake")
+    set(toolchain "iar")
     if(NOT AFR_METADATA_MODE)
         message(FATAL_ERROR "CMake support for TI using IAR is not complete yet.")
 endif()
@@ -173,6 +174,7 @@ target_include_directories(
 )
 
 # Common I/O, currently only fully supported for GCC
+if(${AFR_TOOLCHAIN} STREQUAL "arm-gcc")
 afr_mcu_port(common_io)
 target_sources(
   AFR::common_io::mcu_port
@@ -197,6 +199,7 @@ target_include_directories(
       "${sysconfig_out}"
       "$<IF:${AFR_IS_TESTING},${AFR_MODULES_ABSTRACTIONS_DIR}/common_io/test,>"
 )
+endif()
 
 # WiFi
 afr_mcu_port(wifi)
@@ -304,7 +307,7 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
         ${exe_target}
         PRIVATE
             AFR::wifi
-            AFR::common_io
+             $<$<TARGET_EXISTS:AFR::common_io::mcu_port>:AFR::common_io>
             AFR::utils
             ${link_extra_flags}
     )

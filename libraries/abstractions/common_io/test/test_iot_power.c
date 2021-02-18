@@ -214,7 +214,7 @@ static void prvIotPowerCallbackCancelIdle( bool bIdleState,
 static void prvDisableInterrupts()
 {
     /* Check for ARM target */
-    #ifndef __TI_COMPILER_VERSION__ && # ifdef__ARM_ARCH /* TI compiler does not support in-line assembly.*/
+    #ifdef __ARM_ARCH
         ultestIotPowerSavedInterruptConfig1 = *( volatile uint32_t * ) 0xE000E100;
         ultestIotPowerSavedInterruptConfig2 = *( volatile uint32_t * ) 0xE000E104;
 
@@ -237,7 +237,7 @@ static void prvDisableInterrupts()
 static void prvEnableInterrupts()
 {
     /* Check for ARM target */
-    #ifndef __TI_COMPILER_VERSION__ && # ifdef__ARM_ARCH /* TI compiler does not support in-line assembly.*/
+    #ifdef __ARM_ARCH
         /* Re-Enable the interrupts at nvic */
         *( volatile uint32_t * ) 0xE000E100 = ultestIotPowerSavedInterruptConfig1;
         *( volatile uint32_t * ) 0xE000E104 = ultestIotPowerSavedInterruptConfig2;

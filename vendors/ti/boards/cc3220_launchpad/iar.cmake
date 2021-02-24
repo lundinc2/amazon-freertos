@@ -43,7 +43,7 @@ set( compiler_posix_includes
 set(assembler_flags "-s+" -M{} "-w-" "-j" "--cpu" "Cortex-M4" "--fpu" "None")
 
 set(linker_flags
-    --config "${simplelink_sdk_dir}/source/ti/boards/cc3220_launchpad/CC3220SF_LAUNCHXL_FREERTOS.icf"
+    --config "${simplelink_sdk_dir}/source/ti/boards/CC3220SF_LAUNCHXL/CC3220SF_LAUNCHXL_FREERTOS.icf"
     --semihosting --entry __iar_program_start --vfe --text_out locale
 )
 

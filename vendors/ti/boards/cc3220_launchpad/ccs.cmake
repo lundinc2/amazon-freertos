@@ -56,6 +56,7 @@ set(compiler_specific_src
     "${AFR_KERNEL_DIR}/portable/CCS/ARM_CM3/port.c"
     "${AFR_KERNEL_DIR}/portable/CCS/ARM_CM3/portasm.asm"
     "${AFR_KERNEL_DIR}/portable/CCS/ARM_CM3/portmacro.h"
+    "${CMAKE_CURRENT_LIST_DIR}/CC3220SF_LAUNCHXL_FREERTOS.cmd"
 )
 
 set(compiler_specific_include

@@ -218,6 +218,11 @@
 			<locationURI>BASE_DIR_ROOT/freertos_kernel/portable/CCS/ARM_CM3/portmacro.h</locationURI>
 		</link>
 		<link>
+			<name>vendors/ti/boards/cc3220_launchpad/CC3220SF_LAUNCHXL_FREERTOS.cmd</name>
+			<type>1</type>
+			<locationURI>BASE_DIR_ROOT/vendors/ti/boards/cc3220_launchpad/CC3220SF_LAUNCHXL_FREERTOS.cmd</locationURI>
+		</link>
+		<link>
 			<name>demos/demo_runner/aws_demo_version.c</name>
 			<type>1</type>
 			<locationURI>BASE_DIR_ROOT/demos/demo_runner/aws_demo_version.c</locationURI>

@@ -105,6 +105,8 @@ set(
     "${esp_idf_dir}/components/esp_timer/include"
     "${esp_idf_dir}/components/esp_common/include"
     "${esp_idf_dir}/components/esp_system/include"
+    "${esp_idf_dir}/components/ulp/include"
+    "${extra_components_dir}/example_ulp"
 )
 
 if(AFR_ESP_FREERTOS_TCP)
@@ -448,6 +450,9 @@ if (NOT IDF_PROJECT_EXECUTABLE)
     set(IDF_PROJECT_EXECUTABLE ${exe_target})
 endif()
 
+list(APPEND extra_exe_sources 
+    "${extra_components_dir}/example_ulp/ulp_example.c")
+
 if (NOT IDF_EXECUTABLE_SRCS)
     set(IDF_EXECUTABLE_SRCS "${board_dir}/application_code/main.c" ${extra_exe_sources})
 endif()
@@ -461,6 +466,7 @@ target_include_directories(
     ${IDF_PROJECT_EXECUTABLE}
     PUBLIC
         "${esp_idf_dir}/components/esp_ringbuf/include"
+        "${CMAKE_BINARY_DIR}/esp-idf/example_ulp/ulp_example_ulp"
         $<TARGET_PROPERTY:AFR::kernel,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:AFR::ble_hal::mcu_port,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:AFR::wifi::mcu_port,INTERFACE_INCLUDE_DIRECTORIES>
@@ -473,6 +479,7 @@ target_link_libraries(
         AFR::utils
         AFR::ble
         AFR::common_io
+        -T"${CMAKE_BINARY_DIR}/esp-idf/example_ulp/ulp_example_ulp/ulp_example_ulp.ld"
 )
 
 if(AFR_METADATA_MODE)
@@ -558,6 +565,13 @@ set_property(GLOBAL PROPERTY IDF_PROJECT_EXECUTABLE ${IDF_PROJECT_EXECUTABLE})
 get_filename_component(
     ABS_EXTRA_COMPONENT_DIRS
     "${extra_components_dir}/freertos" ABSOLUTE
+)
+
+idf_build_component(${ABS_EXTRA_COMPONENT_DIRS})
+
+get_filename_component(
+    ABS_EXTRA_COMPONENT_DIRS
+    "${extra_components_dir}/example_ulp" ABSOLUTE
 )
 
 idf_build_component(${ABS_EXTRA_COMPONENT_DIRS})

@@ -75,6 +75,17 @@
     #include "iot_ble_numericComparison.h"
 #endif
 
+#include "esp_sleep.h"
+#include "nvs.h"
+#include "nvs_flash.h"
+#include "soc/rtc_cntl_reg.h"
+#include "soc/sens_reg.h"
+#include "soc/rtc_periph.h"
+#include "driver/gpio.h"
+#include "driver/rtc_io.h"
+#include "esp32/ulp.h"
+#include "ulp_example.h"
+
 /* Logging Task Defines. */
 #define mainLOGGING_MESSAGE_QUEUE_LENGTH    ( 32 )
 #define mainLOGGING_TASK_STACK_SIZE         ( configMINIMAL_STACK_SIZE * 4 )
@@ -99,7 +110,6 @@ static void prvMiscInitialization( void );
 #endif
 
 IotUARTHandle_t xConsoleUart;
-
 
 static void iot_uart_init( void )
 {
@@ -129,6 +139,21 @@ int app_main( void )
 {
     /* Perform any hardware initialization that does not require the RTOS to be
      * running.  */
+    for(;;)
+    {
+        esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+        if (cause != ESP_SLEEP_WAKEUP_ULP) {
+            printf("Not ULP wakeup, initializing ULP\n");
+            init_ulp_program();
+        } else {
+            printf("ULP wakeup, saving pulse count\n");
+            update_pulse_count();
+        }
+    }
+
+    printf("Entering deep sleep\n\n");
+    ESP_ERROR_CHECK( esp_sleep_enable_ulp_wakeup() );
+    esp_deep_sleep_start();
 
     prvMiscInitialization();
 

@@ -450,9 +450,6 @@ if (NOT IDF_PROJECT_EXECUTABLE)
     set(IDF_PROJECT_EXECUTABLE ${exe_target})
 endif()
 
-list(APPEND extra_exe_sources 
-    "${extra_components_dir}/example_ulp/ulp_example.c")
-
 if (NOT IDF_EXECUTABLE_SRCS)
     set(IDF_EXECUTABLE_SRCS "${board_dir}/application_code/main.c" ${extra_exe_sources})
 endif()
@@ -479,7 +476,6 @@ target_link_libraries(
         AFR::utils
         AFR::ble
         AFR::common_io
-        -T"${CMAKE_BINARY_DIR}/esp-idf/example_ulp/ulp_example_ulp/ulp_example_ulp.ld"
 )
 
 if(AFR_METADATA_MODE)
@@ -575,6 +571,7 @@ get_filename_component(
 )
 
 idf_build_component(${ABS_EXTRA_COMPONENT_DIRS})
+#idf_import_components(${ABS_EXTRA_COMPONENT_DIRS})
 
 get_filename_component(
     ABS_EXTRA_COMPONENT_DIRS

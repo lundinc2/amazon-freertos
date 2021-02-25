@@ -1,5 +1,5 @@
 idf_component_register(SRCS "ulp_example.c"
-                    INCLUDE_DIRS ""
+                    INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}"
                     REQUIRES soc nvs_flash ulp)
 #
 # ULP support additions to component CMakeLists.txt.

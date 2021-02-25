@@ -70,5 +70,5 @@ idf_component_register(SRCS "extra.c"
                             "${AMAZON_FREERTOS_KERNEL_DIR}/timers.c"
                     INCLUDE_DIRS "${include_dirs}"
                     LDFRAGMENTS linker.lf
-                    REQUIRES app_trace esp_timer
+                    REQUIRES app_trace esp_timer example_ulp
                     PRIV_REQUIRES soc)

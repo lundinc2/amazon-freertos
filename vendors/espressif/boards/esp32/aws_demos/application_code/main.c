@@ -140,7 +140,10 @@ int app_main( void )
 {
     /* Perform any hardware initialization that does not require the RTOS to be
      * running.  */
+
+
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+    printf("Reset Reason: %d\n", esp_reset_reason());
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
         printf("Not ULP wakeup, initializing ULP\n");
         init_ulp_program();

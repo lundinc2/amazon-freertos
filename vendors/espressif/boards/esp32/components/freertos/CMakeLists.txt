@@ -23,7 +23,7 @@ endif()
 set(COMPONENT_ADD_INCLUDEDIRS "${include_dirs}")
 
 # Edit following two lines to set component requirements (see docs)
-set(COMPONENT_REQUIRES )
+set(COMPONENT_REQUIRES example_ulp)
 set(COMPONENT_PRIV_REQUIRES )
 
 set(COMPONENT_SRCDIRS . ${AMAZON_FREERTOS_KERNEL_DIR}/portable/ThirdParty/GCC/Xtensa_ESP32_IDF3 ${AMAZON_FREERTOS_KERNEL_DIR})

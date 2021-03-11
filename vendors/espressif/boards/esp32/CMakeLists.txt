@@ -122,8 +122,10 @@ set(
     "${esp_idf_dir}/components/spi_flash/include"
     "${esp_idf_dir}/components/vfs/include"
     "${esp_idf_dir}/components/esp_ringbuf/include/"
+    "${esp_idf_dir}/components/ulp/include"
     "${extra_components_dir}/freertos/include"
     "${extra_components_dir}/mbedtls/port/include"
+    "${extra_components_dir}/example_ulp"
 )
 
 if(AFR_ESP_FREERTOS_TCP)
@@ -398,6 +400,7 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
     target_include_directories(
         ${exe_target}
         PUBLIC
+            "${CMAKE_BINARY_DIR}/esp-idf/example_ulp/ulp_example_ulp"
             $<TARGET_PROPERTY:AFR::kernel,INTERFACE_INCLUDE_DIRECTORIES>
             $<TARGET_PROPERTY:AFR::ble_hal::mcu_port,INTERFACE_INCLUDE_DIRECTORIES>
     )
@@ -502,6 +505,13 @@ list(APPEND IDF_EXTRA_COMPONENT_DIRS ${ABS_EXTRA_COMPONENT_DIRS})
 get_filename_component(
     ABS_EXTRA_COMPONENT_DIRS
     "${extra_components_dir}" ABSOLUTE
+)
+
+list(APPEND IDF_EXTRA_COMPONENT_DIRS ${ABS_EXTRA_COMPONENT_DIRS})
+
+get_filename_component(
+    ABS_EXTRA_COMPONENT_DIRS
+    "${extra_components_dir}/example_ulp" ABSOLUTE
 )
 
 list(APPEND IDF_EXTRA_COMPONENT_DIRS ${ABS_EXTRA_COMPONENT_DIRS})
